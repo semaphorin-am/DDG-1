@@ -1,0 +1,18 @@
+# Core numerics
+numpy>=1.24
+scipy>=1.10
+
+# Geometry / mesh I/O
+trimesh>=4.0
+meshio>=5.3
+
+# Analysis & plotting
+matplotlib>=3.7
+pandas>=2.0
+tabulate>=0.9       # pandas.to_markdown for the generated reports
+
+# Optional interactive visualization (not required for the benchmark suite,
+# which renders static figures with matplotlib so it runs headless):
+#   pyvista>=0.43
+#   polyscope>=2.2
+#   libigl
