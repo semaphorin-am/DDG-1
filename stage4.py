@@ -21,4 +21,9 @@ for subdivision in range(0,7):
         print(f"Subdivision level: {subdivision}")
         print(f"Mesh count: {mesh.n_edges}")
         print(f"My count: {len(edges_set)}")
-        print("Computer and my count match")
+        print("Mesh count and my count match")
+    else: 
+        print(f"!ERROR! Subdivision {subdivision} failed")
+        print(f"Mesh count and my count do not match. Please review the code")
+      
+       
