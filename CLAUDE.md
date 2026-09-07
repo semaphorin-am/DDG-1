@@ -11,6 +11,7 @@
 - **Goal:** Learn discrete differential geometry by building a complete DDG pipeline on the unit sphere
 - **Framework:** The 12-stage learning roadmap in `docs/learning_roadmap.md`
 - **Current stage:** Stage 5 completed (functions: euler_number, longest_edge, total_area)
+  *(Update this line after completing each new stage)*
 - **Repository:** semaphorin-am/DDG-1 on GitHub (using dad's account)
 - **Branch:** `claude/discrete-diff-geometry-learn-ugv9hw`
 
