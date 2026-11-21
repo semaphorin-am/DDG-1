@@ -1,0 +1,67 @@
+{
+ "commit": "018fdb4a00d155006ed660c8da8720e4c37f74d1",
+ "default_branch": "claude/ddg-sphere-benchmark-zZ5Qf",
+ "tests": "9 passed (python -m pytest -q tests)",
+ "python": "3.10.12",
+ "numpy": "2.2.6",
+ "scipy": "1.15.3",
+ "platform": "Linux-6.8.0-1060-aws-x86_64-with-glibc2.35",
+ "note": "Recorded before any change. Source = vertex 0, m = 1, regular icosphere. Timings are single runs, indicative only.",
+ "rows": [
+  {
+   "subdivisions": 2,
+   "n_vertices": 162,
+   "h_mean": 0.2993320753185587,
+   "MAE": 0.045047661645229914,
+   "Linf": 0.09656983438268174,
+   "RMSE": 0.045521869018417004,
+   "t_mesh_s": 0.002012487999991208,
+   "t_setup_s": 0.0034118339999906766,
+   "t_query_s": 0.00038077700000371806
+  },
+  {
+   "subdivisions": 3,
+   "n_vertices": 642,
+   "h_mean": 0.1507297051948821,
+   "MAE": 0.023068117967435933,
+   "Linf": 0.05067522538826941,
+   "RMSE": 0.0231983163794506,
+   "t_mesh_s": 0.0065995539999903485,
+   "t_setup_s": 0.006200043999996296,
+   "t_query_s": 0.0008632850000083181
+  },
+  {
+   "subdivisions": 4,
+   "n_vertices": 2562,
+   "h_mean": 0.07549909830150697,
+   "MAE": 0.013233492016400544,
+   "Linf": 0.029205833497095934,
+   "RMSE": 0.013366076057408211,
+   "t_mesh_s": 0.027624535999990485,
+   "t_setup_s": 0.025696957999997494,
+   "t_query_s": 0.0027122959999985596
+  },
+  {
+   "subdivisions": 5,
+   "n_vertices": 10242,
+   "h_mean": 0.03776637041792051,
+   "MAE": 0.008649399384936696,
+   "Linf": 0.01887056131597875,
+   "RMSE": 0.008856110150592943,
+   "t_mesh_s": 0.12150320500001044,
+   "t_setup_s": 0.13745795500000213,
+   "t_query_s": 0.01105338099998221
+  },
+  {
+   "subdivisions": 6,
+   "n_vertices": 40962,
+   "h_mean": 0.018885289137242592,
+   "MAE": 0.006462502857896548,
+   "Linf": 0.013805848897683326,
+   "RMSE": 0.0067481348630069275,
+   "t_mesh_s": 0.47119770399999084,
+   "t_setup_s": 0.8807750610000085,
+   "t_query_s": 0.05141472800002589
+  }
+ ]
+}
