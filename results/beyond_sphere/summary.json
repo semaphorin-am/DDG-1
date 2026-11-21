@@ -1,0 +1,34 @@
+{
+ "environment": {
+  "commit": "3b14d90740a6907223813906516949676fdd34a2",
+  "dirty": false,
+  "python": "3.10.12",
+  "numpy": "2.2.6",
+  "scipy": "1.15.3",
+  "platform": "Linux-6.8.0-1060-aws-x86_64-with-glibc2.35",
+  "machine": "x86_64",
+  "generated": "2026-11-21 16:47:49 UTC"
+ },
+ "runtime_s": 153.64247201099988,
+ "geodesic": {
+  "n": 795,
+  "required": 190,
+  "required_failed": 91,
+  "stress": 605,
+  "stress_failed": 199
+ },
+ "heat_modes": {
+  "n": 166,
+  "failed": 0,
+  "vacuous": 15
+ },
+ "structure": {
+  "n": 53,
+  "failed": 0
+ },
+ "negative_controls": {
+  "n": 60,
+  "expected": 51,
+  "rejected_of_expected": 51
+ }
+}

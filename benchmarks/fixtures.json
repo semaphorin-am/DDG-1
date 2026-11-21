@@ -1,0 +1,64 @@
+{
+  "_comment": "Fixed inputs for the beyond-the-sphere benchmark. Committed before solver changes. Sources are given as locations; the benchmark uses the nearest mesh vertex and measures exact distance from that vertex's actual position.",
+  "heat_method_m": 1.0,
+  "heat_method_m_sweep": [1.0, 4.0, 16.0],
+  "_m_note": "m = 1 is the solver default and the only setting that is REQUIRED to pass. m = 4 and 16 were added after the first torus run showed the default stalls (see progress log, entry 3); they are scored against the same, unchanged tolerances.",
+  "sphere": {
+    "levels": [2, 3, 4, 5, 6],
+    "extra_levels_regular": [7],
+    "seeds": [11, 23, 47],
+    "variants": {
+      "regular": {"amplitude": 0.0,  "required": true,  "note": "original icosphere (baseline family)"},
+      "mild":    {"amplitude": 0.15, "required": true,  "note": "tangential jitter, 15% of local edge length"},
+      "strong":  {"amplitude": 0.40, "required": false, "note": "stress case: 40% jitter, produces slivers and non-Delaunay edges; outcome is recorded against the same tolerances but is not required to pass"}
+    },
+    "sources": {
+      "ico_vertex":   {"kind": "vertex", "index": 0, "note": "baseline source; valence-5 icosahedron corner"},
+      "face_center":  {"kind": "direction", "xyz": [-0.35682209, 0.93417236, 0.0], "note": "centre of an icosahedron face (valence 6, most regular region)"},
+      "generic_a":    {"kind": "direction", "xyz": [0.36, -0.48, 0.80]},
+      "generic_b":    {"kind": "direction", "xyz": [-0.70, -0.10, -0.70]},
+      "worst_triangle": {"kind": "worst_triangle", "note": "difficult source: the vertex at the smallest angle of the worst-shaped triangle of that mesh"}
+    },
+    "heat_modes": {"degrees": [1, 2], "T": 0.1}
+  },
+  "torus": {
+    "Lx": 1.5,
+    "Ly": 1.0,
+    "resolutions": [[24, 16], [48, 32], [96, 64], [192, 128]],
+    "extra_resolutions_regular": [[384, 256]],
+    "seeds": [11, 23, 47],
+    "variants": {
+      "regular":  {"jitter": 0.0,  "required": true},
+      "jittered": {"jitter": 0.25, "required": true, "note": "in-plane jitter, 25% of grid spacing"}
+    },
+    "sources": {
+      "center":      {"frac": [0.50, 0.50], "note": "far from both seams"},
+      "near_x_seam": {"frac": [0.97, 0.37], "note": "just left of the x = Lx ~ 0 seam"},
+      "near_y_seam": {"frac": [0.40, 0.03], "note": "just above the y = 0 ~ Ly seam"},
+      "corner":      {"frac": [0.98, 0.97], "note": "near both seams at once"},
+      "on_seam":     {"frac": [0.0, 0.0],   "note": "exactly on the identified corner"}
+    },
+    "heat_modes": {"modes": [[0, 0], [1, 0], [0, 1], [1, 1], [2, 1], [3, 2]], "T": 0.01},
+    "gaussian": {"center_frac": [0.90, 0.85], "s0": 0.08,
+                 "times": [0.0, 0.001, 0.002, 0.004, 0.008, 0.016, 0.032, 0.064]}
+  },
+  "negative_controls": {
+    "unwrapped_reference": "Score the exact unwrapped (straight-line-in-rectangle) distance as if it were the solver output for the near-seam sources; it must FAIL the geodesic tolerance.",
+    "unstitched_mesh": "Run the real solver on the same rectangle with the seam left open (no identification); it must FAIL the geodesic tolerance for near-seam sources.",
+    "wrong_decay": "Score exp(-2 lam T) (rate doubled) as the heat amplitude; it must FAIL the decay tolerance."
+  },
+  "performance": {
+    "repeats": 7,
+    "queries_per_repeat": 5,
+    "threads": 1,
+    "meshes": [
+      {"family": "sphere", "level": 6, "variant": "regular", "seed": 0},
+      {"family": "sphere", "level": 6, "variant": "mild", "seed": 11},
+      {"family": "sphere", "level": 6, "variant": "strong", "seed": 11},
+      {"family": "sphere", "level": 7, "variant": "regular", "seed": 0},
+      {"family": "torus", "resolution": [192, 128], "variant": "regular", "seed": 0},
+      {"family": "torus", "resolution": [192, 128], "variant": "jittered", "seed": 11},
+      {"family": "torus", "resolution": [384, 256], "variant": "regular", "seed": 0}
+    ]
+  }
+}

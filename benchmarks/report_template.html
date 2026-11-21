@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDG-1 | Geometry beyond the sphere</title>
+<style>
+:root{--bg:#fbfbfa;--fg:#1c1d1f;--mut:#5d6470;--line:#d9dce1;--card:#fff;--wash:#f1f2f4;--acc:#2456c8;
+--good:#197a3e;--bad:#b3261e;--warn:#9a5b00;--c0:#2456c8;--c1:#c2571a;--c2:#7a3fb5;--c3:#19806f}
+@media (prefers-color-scheme:dark){:root{--bg:#15171a;--fg:#e7e9ec;--mut:#9aa2ad;--line:#343840;--card:#1c1f23;--wash:#24282e;--acc:#7ea6ff;
+--good:#5cc98a;--bad:#ff8a80;--warn:#e8b45a;--c0:#7ea6ff;--c1:#f0965a;--c2:#b993ee;--c3:#5fc9b6}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+main{max-width:1120px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:21px;margin:44px 0 6px;padding-top:12px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:22px 0 6px}
+p{margin:6px 0 10px}.mut{color:var(--mut)}.small{font-size:13px}
+a{color:var(--acc)}code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--wash);padding:1px 5px;border-radius:4px}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 0;margin:14px 0 6px;z-index:5;display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px}
+nav a{text-decoration:none}
+.findings{display:grid;gap:10px;margin:14px 0}
+.finding{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:6px;padding:10px 14px}
+.finding.bad{border-left-color:var(--bad)}.finding.good{border-left-color:var(--good)}.finding.warn{border-left-color:var(--warn)}
+.finding b{display:block;margin-bottom:2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;margin:10px 0;padding:10px 12px;background:var(--wash);border-radius:6px}
+.controls label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+select,button,input[type=range]{font:inherit}
+select,button{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:4px 8px}
+button{cursor:pointer}button:hover{border-color:var(--acc)}button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.row{display:grid;gap:14px}.r2{grid-template-columns:repeat(2,1fr)}.r3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:800px){.r2,.r3{grid-template-columns:1fr}}
+figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px}
+figcaption{font-size:12.5px;color:var(--mut);margin-top:4px;min-height:18px}
+figure .t{font-size:13px;font-weight:600;margin-bottom:4px}
+canvas{width:100%;display:block;border-radius:3px;touch-action:none}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--card)}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:600;font-size:12px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+.pill{display:inline-block;padding:0 7px;border-radius:9px;font-size:11.5px;font-weight:600;border:1px solid currentColor}
+.ok{color:var(--good)}.no{color:var(--bad)}.wn{color:var(--warn)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.stat .k{font-size:11.5px;color:var(--mut)}.stat .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.bar{display:inline-block;height:9px;border-radius:2px;vertical-align:middle}
+.cb{height:10px;border-radius:2px;margin-top:6px}.cbl{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
+svg text{fill:var(--fg);font-size:11px}svg .ax{stroke:var(--line)}svg .gl{stroke:var(--line);stroke-dasharray:2 3}
+.note{border:1px solid var(--warn);border-radius:6px;padding:8px 12px;margin:10px 0;background:var(--card)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin:4px 0}.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+<main>
+<h1>Geometry beyond the sphere</h1>
+<div class="mut">DDG-1 benchmark extended to irregular sphere meshes and a flat periodic torus, judged against exact answers. <span id="rev"></span></div>
+<nav><a href="#findings">Findings</a><a href="#geometry">Geometry and seams</a><a href="#fields">Exact vs computed</a><a href="#heat">Heat diffusion</a><a href="#convergence">Convergence and failure</a><a href="#cost">Accuracy vs cost</a><a href="#checks">Checks and reproduction</a></nav>
+
+<h2 id="findings" style="border:0;margin-top:14px">Findings</h2>
+<div class="findings" id="findingList"></div>
+<div class="stats" id="topStats"></div>
+
+<h2 id="geometry">Geometry and seams</h2>
+<h3>Regular and perturbed sphere meshes</h3>
+<p class="mut small">Same connectivity; vertices are moved tangentially by a fraction of the local edge length and put back on the sphere. Triangles are shaded by their smallest angle. Drag to rotate; both views turn together.</p>
+<div class="controls">
+<label>Resolution<select id="gLevel"></select></label>
+<label>Perturbation<select id="gVar"><option value="mild">mild (0.15 edge lengths)</option><option value="strong" selected>strong (0.40 edge lengths, stress case)</option></select></label>
+<label>Seed<select id="gSeed"></select></label>
+</div>
+<div class="row r2">
+<figure><div class="t">Regular icosphere</div><canvas id="gA" width="760" height="560"></canvas><figcaption id="gAc"></figcaption></figure>
+<figure><div class="t" id="gBt">Perturbed</div><canvas id="gB" width="760" height="560"></canvas><figcaption id="gBc"></figcaption></figure>
+</div>
+<div class="cb" id="gCb"></div><div class="cbl"><span>smallest angle 0&deg;</span><span>30&deg;</span><span>60&deg; (equilateral)</span></div>
+
+<h3 id="seam">Flat torus: the periodic rectangle and the wraparound route</h3>
+<p class="mut small">The torus is the rectangle 1.5 &times; 1 with left/right and bottom/top edges identified (matching edge marks). Neighbouring copies are drawn faintly. Click or drag anywhere to move the target.</p>
+<div class="controls">
+<label>Source<select id="sSrc"></select></label>
+<label>Mesh<select id="sRes"></select></label>
+<label>Mesh variant<select id="sVar"><option value="regular|0">regular</option><option value="jittered|11">jittered, seed 11</option></select></label>
+</div>
+<div class="row" style="grid-template-columns:3fr 2fr">
+<figure><canvas id="sC" width="1100" height="800"></canvas>
+<div class="legend"><span><i style="background:var(--good)"></i>shortest route (crosses the seam)</span><span><i style="background:var(--bad)"></i>unwrapped route (stays inside the rectangle)</span></div></figure>
+<div><div class="stats" id="sStats" style="grid-template-columns:1fr 1fr"></div><div id="sText" class="small"></div></div>
+</div>
+
+<h2 id="fields">Exact vs computed: geodesic distance</h2>
+<p class="mut small">Left and middle share one colour scale, drawn in 16 equal distance bands; the right panel is computed minus exact on a symmetric scale. The exact field is recomputed in this page from the vertex positions; the computed field comes from the benchmark output.</p>
+<div class="controls">
+<label>Surface<select id="fFam"><option value="sphere">sphere</option><option value="torus">flat torus</option></select></label>
+<label>Resolution<select id="fRes"></select></label>
+<label>Mesh<select id="fVar"></select></label>
+<label>Source<select id="fSrc"></select></label>
+<label>Heat time t = m&middot;h&sup2;<select id="fM"></select></label>
+<label>Error scale<select id="fScale"><option value="auto">this case</option><option value="tol">&plusmn; L&infin; tolerance</option></select></label>
+<label id="fNegL">Test the test<button id="fNeg">Show unwrapped (wrong) answer</button></label>
+</div>
+<div class="row r3">
+<figure><div class="t">Exact</div><canvas id="fA" width="560" height="440"></canvas></figure>
+<figure><div class="t" id="fBt">Computed (heat method)</div><canvas id="fB" width="560" height="440"></canvas></figure>
+<figure><div class="t">Signed error (computed &minus; exact)</div><canvas id="fC" width="560" height="440"></canvas></figure>
+</div>
+<div class="row r3" style="margin-top:4px"><div style="grid-column:span 2"><div class="cb" id="fCb1"></div><div class="cbl" id="fCb1l"></div></div><div><div class="cb" id="fCb2"></div><div class="cbl" id="fCb2l"></div></div></div>
+<div class="stats" id="fStats"></div>
+<p class="small mut" id="fNote"></p>
+
+<h2 id="heat">Exact vs computed: heat diffusion</h2>
+<p class="mut small">A Gaussian bump placed next to the corner of the rectangle, so heat must leave through both seams and re-enter on the far sides. The exact solution is the periodised Gaussian with variance s&#8320;&sup2; + 2t.</p>
+<div class="controls">
+<label>Mesh<select id="hRes"></select></label>
+<label>Mesh variant<select id="hVar"><option value="regular|0">regular</option><option value="jittered|11">jittered, seed 11</option></select></label>
+<label style="flex:1;min-width:240px">Diffusion time: <b id="hTl"></b><input type="range" id="hT" min="0" max="7" step="1" value="3"></label>
+<button id="hPlay">Play</button>
+</div>
+<div class="row r3">
+<figure><div class="t">Exact</div><canvas id="hA" width="560" height="380"></canvas></figure>
+<figure><div class="t">Computed (implicit Euler)</div><canvas id="hB" width="560" height="380"></canvas></figure>
+<figure><div class="t">Signed error</div><canvas id="hC" width="560" height="380"></canvas></figure>
+</div>
+<div class="row r3" style="margin-top:4px"><div style="grid-column:span 2"><div class="cb" id="hCb1"></div><div class="cbl" id="hCb1l"></div></div><div><div class="cb" id="hCb2"></div><div class="cbl" id="hCb2l"></div></div></div>
+<div class="stats" id="hStats"></div>
+<h3>Fourier-mode decay</h3>
+<p class="mut small">Each analytic mode is evolved to a fixed time and the surviving amplitude compared with exp(&minus;&lambda;T). Tolerance: relative rate error &le; &lambda;h&sup2;. Mode (0,0) is the constant and must not change at all.</p>
+<div class="controls"><label>Surface<select id="mFam"><option value="torus">flat torus</option><option value="sphere">sphere</option></select></label><label>Mesh<select id="mVar"></select></label></div>
+<div class="row" style="grid-template-columns:3fr 2fr"><div class="tw"><table id="mTab"></table></div><figure><div class="t">Decay-rate error vs mesh spacing</div><div id="mPlot"></div><figcaption>Dashed: slope 2 (second order). One line per mode.</figcaption></figure></div>
+
+<h2 id="convergence">Convergence and failure</h2>
+<p class="mut small">Every dot is one mesh &times; seed &times; source. Lines join the mean of each mesh variant; the dashed line is the acceptance tolerance fixed before the solver was touched. Filled dots have an error map: click one to open it above.</p>
+<div class="controls">
+<label>Surface<select id="cFam"><option value="sphere">sphere</option><option value="torus">flat torus</option></select></label>
+<label>Metric<select id="cMet"><option value="mae_rel">mean error / diameter</option><option value="linf_rel">worst-point error / diameter</option></select></label>
+<label>Heat time t = m&middot;h&sup2;<select id="cM"><option value="1">m = 1 (default, scored)</option><option value="4">m = 4</option><option value="16">m = 16</option></select></label>
+</div>
+<div class="row" style="grid-template-columns:3fr 2fr">
+<figure><div id="cPlot"></div><div class="legend" id="cLeg"></div></figure>
+<div><div class="note" id="cAnn"></div><div class="tw"><table id="cTab"></table></div></div>
+</div>
+<h3 id="quality">Triangle quality and error (sphere)</h3>
+<p class="mut small">One dot per mesh (mean over five sources, m = 1). Vertical axis: mean error divided by the regular icosphere's at the same resolution.</p>
+<div class="row r2"><figure><div id="qPlot"></div><figcaption>Horizontal axis: fraction of obtuse triangles.</figcaption></figure><figure><div id="qPlot2"></div><figcaption>Horizontal axis: local smallest angle at the source vertex (degrees). Vertical: that source's mean error relative to the regular mesh. Source placement has little effect.</figcaption></figure></div>
+
+<h2 id="cost">Accuracy vs cost</h2>
+<p class="mut small" id="pIntro"></p>
+<div class="controls"><label>Metric<select id="pMet"><option value="setup_s">setup (factorization), seconds</option><option value="query_s">per query, seconds</option><option value="solver_peak_mb">peak solver memory, MB</option></select></label></div>
+<figure><div id="pBars"></div><div class="legend"><span><i style="background:var(--c0);height:9px"></i>baseline (SuperLU default ordering)</span><span><i style="background:var(--c1);height:9px"></i>optimised (nested dissection)</span><span class="mut">ticks: each of the repeats</span></div></figure>
+<h3>All metrics</h3>
+<div class="tw"><table id="pTab"></table></div>
+<p class="small mut" id="pNote"></p>
+
+<h2 id="checks">Checks and reproduction</h2>
+<h3>Tests of the tests</h3>
+<p class="mut small">Known-wrong answers pushed through the same scoring code and tolerances. Rows marked "not expected" are the interior source, where the wrong answer happens to be right or nearly right.</p>
+<div class="tw"><table id="nTab"></table></div>
+<h3>Structure</h3>
+<div class="tw"><table id="stTab"></table></div>
+<h3>Reproduce</h3>
+<p><code>bash reproduce.sh</code> from a fresh checkout installs the requirements, runs the tests, reruns the accuracy and cost benchmarks, and rebuilds the figures and this file.</p>
+<p class="small">Raw results (relative links work when this file is opened from the repository): <span id="rawLinks"></span></p>
+<h3>Not verified</h3>
+<ul class="small" id="unver"></ul>
+</main>
+<script>
+const D = /*__DATA__*/null;
+const $ = id => document.getElementById(id);
+const tbl = r => r.rows.map(a => Object.fromEntries(r.cols.map((c, i) => [c, a[i]])));
+const GEO = tbl(D.geo), QUAL = tbl(D.quality), STRUCT = tbl(D.structure), HEAT = tbl(D.heat),
+  GAUSS = tbl(D.gauss), NEG = tbl(D.neg), PERF = tbl(D.perf), EARLY = D.perf_earlier ? tbl(D.perf_earlier) : null, RUNS = tbl(D.runs);
+const TOR = D.fixtures.torus, LX = TOR.Lx, LY = TOR.Ly;
+const geoKey = r => `${r.case}|${r.m}|${r.source}`;
+const GEOMAP = new Map(GEO.map(r => [geoKey(r), r]));
+const bytes = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
+const cache = new Map();
+const memo = (k, f) => { if (!cache.has(k)) cache.set(k, f()); return cache.get(k); };
+const meshV = k => memo('V' + k, () => new Float32Array(bytes(D.meshes[k])));
+const meshF = k => memo('F' + k, () => new Uint16Array(bytes(D.faces[k])));
+const deq = (o, k) => memo(k, () => { const q = new Int16Array(bytes(o.d)), f = new Float32Array(q.length); for (let i = 0; i < q.length; i++) f[i] = q[i] / 32767 * o.s; return f; });
+const e0 = x => x === 0 ? 'exactly 0' : x.toExponential(0);
+const fmt = (x, n = 3) => x == null ? '-' : (x === 0 ? '0' : (Math.abs(x) < 1e-3 || Math.abs(x) >= 1e5 ? x.toExponential(n - 1) : x.toPrecision(n)));
+const pct = (x, n = 2) => (100 * x).toFixed(n) + '%';
+const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+const uniq = a => [...new Set(a)];
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pill = (ok, a = 'pass', b = 'fail') => `<span class="pill ${ok ? 'ok' : 'no'}">${ok ? a : b}</span>`;
+const opts = (sel, list, val) => { sel.innerHTML = list.map(o => Array.isArray(o) ? `<option value="${o[0]}">${o[1]}</option>` : `<option>${o}</option>`).join(''); if (val != null && [...sel.options].some(o => o.value == val)) sel.value = val; };
+const resOrder = r => r[0] == 'L' ? +r.slice(1) : +r.split('x')[0];
+
+/* ---------- colour ---------- */
+const VIR = [[68,1,84],[72,40,120],[62,74,137],[49,104,142],[38,130,142],[31,158,137],[53,183,121],[109,205,89],[180,222,44],[253,231,37]];
+const DIV = [[33,60,150],[75,125,200],[150,185,230],[245,245,245],[240,170,140],[210,90,70],[150,25,35]];
+const ANG = [[150,25,35],[225,120,60],[245,215,120],[120,190,150],[45,120,160]];
+function lut(tab, t) { t = Math.min(1, Math.max(0, t)) * (tab.length - 1); const i = Math.min(tab.length - 2, Math.floor(t)), f = t - i, a = tab[i], b = tab[i + 1]; return [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2])]; }
+const rgb = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+const seq = (lo, hi, bands) => v => { let t = (v - lo) / (hi - lo || 1); if (bands) t = (Math.min(bands - 1, Math.floor(t * bands)) + 0.5) / bands; return rgb(lut(VIR, t)); };
+const dvg = lim => v => rgb(lut(DIV, 0.5 + 0.5 * v / (lim || 1)));
+const angc = v => rgb(lut(ANG, v / 60));
+function colorbar(el, tab, lel, labels) { const n = tab.length; el.style.background = `linear-gradient(90deg,${tab.map((c, i) => `${rgb(c)} ${100 * i / (n - 1)}%`).join(',')})`; if (lel) lel.innerHTML = labels.map(s => `<span>${s}</span>`).join(''); }
+
+/* ---------- sphere drawing ---------- */
+let ROT = [1,0,0, 0,1,0, 0,0,1];
+const mul = (A, B) => { const C = new Array(9); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) C[3 * i + j] = A[3 * i] * B[j] + A[3 * i + 1] * B[3 + j] + A[3 * i + 2] * B[6 + j]; return C; };
+const rotX = a => [1,0,0, 0,Math.cos(a),-Math.sin(a), 0,Math.sin(a),Math.cos(a)];
+const rotY = a => [Math.cos(a),0,Math.sin(a), 0,1,0, -Math.sin(a),0,Math.cos(a)];
+function lookAt(p) { // rotation taking unit vector p to a point up-left of the viewer
+  const t = [-0.38, 0.38, 0.843], n = Math.hypot(...p), a = p.map(x => x / n);
+  const ax = [a[1] * t[2] - a[2] * t[1], a[2] * t[0] - a[0] * t[2], a[0] * t[1] - a[1] * t[0]], s = Math.hypot(...ax), c = a[0] * t[0] + a[1] * t[1] + a[2] * t[2];
+  if (s < 1e-9) return c > 0 ? [1,0,0,0,1,0,0,0,1] : rotY(Math.PI);
+  const k = ax.map(x => x / s), K = [0,-k[2],k[1], k[2],0,-k[0], -k[1],k[0],0], K2 = mul(K, K);
+  return [1,0,0,0,1,0,0,0,1].map((v, i) => v + s * K[i] + (1 - c) * K2[i]);
+}
+function drawSphere(cv, V, F, faceColor, o = {}) {
+  const g = cv.getContext('2d'), W = cv.width, H = cv.height, R = Math.min(W, H) * 0.47, cx = W / 2, cy = H / 2, n = V.length / 3;
+  g.clearRect(0, 0, W, H);
+  const P = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const x = V[3 * i], y = V[3 * i + 1], z = V[3 * i + 2];
+    P[3 * i] = cx + R * (ROT[0] * x + ROT[1] * y + ROT[2] * z); P[3 * i + 1] = cy - R * (ROT[3] * x + ROT[4] * y + ROT[5] * z); P[3 * i + 2] = ROT[6] * x + ROT[7] * y + ROT[8] * z; }
+  g.lineJoin = 'round';
+  for (let f = 0; f < F.length; f += 3) { const a = F[f], b = F[f + 1], c = F[f + 2];
+    if (P[3 * a + 2] + P[3 * b + 2] + P[3 * c + 2] < -0.05) continue;
+    const col = faceColor(f / 3, a, b, c); g.fillStyle = col; g.strokeStyle = o.edges || col; g.lineWidth = o.edges ? 0.7 : 1;
+    g.beginPath(); g.moveTo(P[3 * a], P[3 * a + 1]); g.lineTo(P[3 * b], P[3 * b + 1]); g.lineTo(P[3 * c], P[3 * c + 1]); g.closePath(); g.fill(); g.stroke(); }
+  for (const m of (o.marks || [])) { if (P[3 * m.v + 2] < 0) continue; marker(g, P[3 * m.v], P[3 * m.v + 1], m); }
+}
+function marker(g, x, y, m) { g.lineWidth = 3; g.strokeStyle = '#fff'; g.fillStyle = m.color; g.beginPath();
+  if (m.shape == 'x') { g.moveTo(x - 8, y - 8); g.lineTo(x + 8, y + 8); g.moveTo(x + 8, y - 8); g.lineTo(x - 8, y + 8); g.lineWidth = 6; g.stroke(); g.lineWidth = 3; g.strokeStyle = m.color; g.stroke(); }
+  else { g.arc(x, y, 7, 0, 7); g.fill(); g.stroke(); }
+  if (m.label) { g.font = '600 15px sans-serif'; g.lineWidth = 4; g.strokeStyle = '#fff'; g.strokeText(m.label, x + 11, y - 9); g.fillStyle = '#111'; g.fillText(m.label, x + 11, y - 9); } }
+const sphereViews = [];
+function dragRotate(cv) { let last = null;
+  cv.addEventListener('pointerdown', e => { last = [e.clientX, e.clientY]; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => { if (!last) return; const dx = e.clientX - last[0], dy = e.clientY - last[1]; last = [e.clientX, e.clientY]; ROT = mul(mul(rotY(dx * 0.01), rotX(dy * 0.01)), ROT); sphereViews.forEach(f => f()); });
+  cv.addEventListener('pointerup', () => last = null); cv.style.cursor = 'grab'; }
+
+/* ---------- torus drawing ---------- */
+const wrap = (d, L) => d - L * Math.round(d / L);
+function drawTorus(cv, V, F, dim, faceColor, o = {}) {
+  const g = cv.getContext('2d'), W = cv.width, H = cv.height, pad = o.pad == null ? 0.04 : o.pad;
+  const x0 = -pad * LX, x1 = (1 + pad) * LX, y0 = -pad * LY, y1 = (1 + pad) * LY, s = Math.min(W / (x1 - x0), H / (y1 - y0));
+  const ox = (W - s * (x1 - x0)) / 2, oy = (H - s * (y1 - y0)) / 2, X = x => ox + s * (x - x0), Y = y => H - oy - s * (y - y0);
+  g.clearRect(0, 0, W, H);
+  const tri = (ax, ay, bx, by, cx, cy, col) => { g.fillStyle = col; g.strokeStyle = o.edges || col; g.lineWidth = o.edges ? 0.6 : 1; g.beginPath(); g.moveTo(X(ax), Y(ay)); g.lineTo(X(bx), Y(by)); g.lineTo(X(cx), Y(cy)); g.closePath(); g.fill(); g.stroke(); };
+  const body = () => { for (let f = 0; f < F.length; f += 3) { const a = F[f], b = F[f + 1], c = F[f + 2], ax = V[dim * a], ay = V[dim * a + 1];
+      const bx = ax + wrap(V[dim * b] - ax, LX), by = ay + wrap(V[dim * b + 1] - ay, LY), cx = ax + wrap(V[dim * c] - ax, LX), cy = ay + wrap(V[dim * c + 1] - ay, LY), col = faceColor(f / 3, a, b, c);
+      const sx = Math.max(ax, bx, cx) > LX ? [0, -LX] : Math.min(ax, bx, cx) < 0 ? [0, LX] : [0], sy = Math.max(ay, by, cy) > LY ? [0, -LY] : Math.min(ay, by, cy) < 0 ? [0, LY] : [0];
+      for (const u of sx) for (const v of sy) tri(ax + u, ay + v, bx + u, by + v, cx + u, cy + v, col); } };
+  if (pad > 0.1) { g.save(); g.globalAlpha = 0.22; g.beginPath(); g.rect(X(x0), Y(y1), s * (x1 - x0), s * (y1 - y0)); g.clip();
+    for (const u of [-LX, 0, LX]) for (const v of [-LY, 0, LY]) { if (!u && !v) continue; g.save(); g.translate(s * u, -s * v); g.beginPath(); g.rect(X(0), Y(LY), s * LX, s * LY); g.clip(); body(); g.restore(); } g.restore(); }
+  g.save(); g.beginPath(); g.rect(X(0), Y(LY), s * LX, s * LY); g.clip(); body(); g.restore();
+  // identified edges
+  const fg = css('--fg'); g.strokeStyle = fg; g.lineWidth = 2; g.setLineDash([7, 5]); g.strokeRect(X(0), Y(LY), s * LX, s * LY); g.setLineDash([]);
+  const chev = (x, y, dx, dy, k) => { for (let i = 0; i < k; i++) { const px = x + dx * i * 9, py = y + dy * i * 9; g.beginPath(); g.moveTo(px - 7 * dx - 7 * dy, py - 7 * dy - 7 * dx); g.lineTo(px, py); g.lineTo(px - 7 * dx + 7 * dy, py - 7 * dy + 7 * dx); g.stroke(); } };
+  g.lineWidth = 2.5; chev(X(0), Y(LY / 2), 0, -1, 1); chev(X(LX), Y(LY / 2), 0, -1, 1); chev(X(LX / 2), Y(0), 1, 0, 2); chev(X(LX / 2), Y(LY), 1, 0, 2);
+  for (const m of (o.marks || [])) { const px = dim ? V[dim * m.v] : 0, py = V[dim * m.v + 1]; marker(g, X(m.x != null ? m.x : px), Y(m.y != null ? m.y : py), m); }
+  return { X, Y, s, g, inv: (px, py) => [x0 + (px - ox) / s, y0 + (H - oy - py) / s] };
+}
+
+/* ---------- small SVG plot ---------- */
+function plot(el, o) {
+  const W = o.w || 620, H = o.h || 360, L = 58, Rm = 14, T = 12, B = 40, lx = o.xlog ? Math.log10 : x => x, ly = o.ylog ? Math.log10 : y => y;
+  const all = o.series.flatMap(s => s.pts), xs = all.map(p => lx(p.x)), ys = all.map(p => ly(p.y)).concat((o.yinclude || []).map(ly));
+  let xa = Math.min(...xs), xb = Math.max(...xs), ya = Math.min(...ys), yb = Math.max(...ys);
+  const px = (xb - xa) * 0.06 || 1, py = (yb - ya) * 0.08 || 1; xa -= px; xb += px; ya -= py; yb += py;
+  const X = x => L + (lx(x) - xa) / (xb - xa) * (W - L - Rm), Y = y => H - B - (ly(y) - ya) / (yb - ya) * (H - T - B);
+  const ticks = (a, b, log) => { const out = []; if (log) { for (let e = Math.floor(a); e <= Math.ceil(b); e++) for (const m of [1, 2, 5]) { const v = Math.log10(m) + e; if (v >= a && v <= b) out.push(m * 10 ** e); } } else { const st = 10 ** Math.floor(Math.log10((b - a) / 4)), k = [1, 2, 5, 10].find(k => (b - a) / (k * st) <= 6) * st; for (let v = Math.ceil(a / k) * k; v <= b; v += k) out.push(+v.toPrecision(10)); } return out; };
+  let s = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">`;
+  const tf = o.yfmt || (v => fmt(v, 2)), xf = o.xfmt || (v => v >= 1000 ? (v / 1000) + 'k' : (v >= 1 ? String(v) : fmt(v, 2)));
+  for (const v of ticks(xa, xb, o.xlog)) s += `<line class="gl" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H - B}"/><text x="${X(v)}" y="${H - B + 15}" text-anchor="middle">${xf(v)}</text>`;
+  for (const v of ticks(ya, yb, o.ylog)) s += `<line class="gl" x1="${L}" x2="${W - Rm}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${tf(v)}</text>`;
+  s += `<line class="ax" x1="${L}" x2="${W - Rm}" y1="${H - B}" y2="${H - B}"/><line class="ax" x1="${L}" x2="${L}" y1="${T}" y2="${H - B}"/>`;
+  s += `<text x="${(L + W - Rm) / 2}" y="${H - 6}" text-anchor="middle">${o.xlabel || ''}</text><text transform="translate(13,${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${o.ylabel || ''}</text>`;
+  const pts = [];
+  for (const se of o.series) {
+    if (se.line) s += `<polyline fill="none" stroke="${se.color}" stroke-width="${se.width || 2}" ${se.dash ? `stroke-dasharray="${se.dash}"` : ''} points="${se.pts.map(p => X(p.x) + ',' + Y(p.y)).join(' ')}"/>`;
+    if (se.dots) for (const p of se.pts) { pts.push(p); s += `<circle cx="${X(p.x) + (p.dx || 0)}" cy="${Y(p.y)}" r="${p.r || 3.6}" fill="${p.hollow ? 'none' : se.color}" fill-opacity="0.75" stroke="${se.color}" data-i="${pts.length - 1}" style="${p.click ? 'cursor:pointer' : ''}"><title>${p.tip || ''}</title></circle>`; }
+  }
+  for (const a of (o.annot || [])) s += `<circle cx="${X(a.x) + (a.dx || 0)}" cy="${Y(a.y)}" r="9" fill="none" stroke="${css('--bad')}" stroke-width="2"/><text x="${X(a.x) - 12}" y="${Y(a.y) - 13}" text-anchor="end" style="font-weight:600">${a.label}</text>`;
+  el.innerHTML = s + '</svg>';
+  el.querySelectorAll('circle[data-i]').forEach(c => c.addEventListener('click', () => { const p = pts[+c.dataset.i]; if (p.click) p.click(); }));
+}
+
+/* ---------- geometry: spheres ---------- */
+function minAngles(V, F) { const out = new Float32Array(F.length / 3); for (let f = 0; f < F.length; f += 3) { const p = [0, 1, 2].map(k => [V[3 * F[f + k]], V[3 * F[f + k] + 1], V[3 * F[f + k] + 2]]); let m = 180;
+    for (let k = 0; k < 3; k++) { const a = p[k], b = p[(k + 1) % 3], c = p[(k + 2) % 3], u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      m = Math.min(m, Math.acos((u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / Math.hypot(...u) / Math.hypot(...v)) * 180 / Math.PI); } out[f / 3] = m; } return out; }
+function drawGeom() {
+  const lv = $('gLevel').value, va = $('gVar').value, sd = $('gSeed').value, F = meshF('sphere|' + lv), edge = 'rgba(20,20,20,.55)';
+  const draw = (cv, key, cap) => { const V = meshV(key), A = memo('A' + key, () => minAngles(V, F)); drawSphere($(cv), V, F, f => angc(A[f]), { edges: lv == 'L4' ? 'rgba(20,20,20,.25)' : edge });
+    const q = QUAL.find(r => r.case == key); $(cap).innerHTML = `${q.n_vertices} vertices &middot; smallest angle ${q.min_angle_min.toFixed(1)}&deg; &middot; obtuse triangles ${pct(q.frac_obtuse, 1)} &middot; negative cotangent weights ${pct(q.frac_negative_weights, 1)}`; };
+  draw('gA', `sphere|${lv}|regular|0`, 'gAc'); draw('gB', `sphere|${lv}|${va}|${sd}`, 'gBc'); $('gBt').textContent = `Perturbed: ${va}, seed ${sd}`;
+}
+
+/* ---------- seam demo ---------- */
+let seamTarget = [0.12 * LX, 0.55 * LY];
+function drawSeam() {
+  const res = $('sRes').value, vs = $('sVar').value, key = `torus|${res}|${vs}`, src = $('sSrc').value, V = meshV(key), F = meshF('torus|' + res), row = GEOMAP.get(`${key}|1|${src}`), dim = V.length / row.n_vertices;
+  const sv = row.source_vertex, S = [V[dim * sv], V[dim * sv + 1]], T = seamTarget, d = [wrap(T[0] - S[0], LX), wrap(T[1] - S[1], LY)], Ti = [S[0] + d[0], S[1] + d[1]], sh = [Ti[0] - T[0], Ti[1] - T[1]];
+  const wash = css('--wash'), v = drawTorus($('sC'), V, F, dim, () => wash, { pad: 0.36, edges: css('--line') }), g = v.g;
+  const seg = (a, b, col, dash, w) => { g.strokeStyle = col; g.lineWidth = w || 4; g.setLineDash(dash || []); g.beginPath(); g.moveTo(v.X(a[0]), v.Y(a[1])); g.lineTo(v.X(b[0]), v.Y(b[1])); g.stroke(); g.setLineDash([]); };
+  const good = css('--good'), bad = css('--bad'), crosses = Math.abs(sh[0]) + Math.abs(sh[1]) > 1e-9;
+  if (crosses) seg(S, T, bad, [10, 7], 3);
+  seg(S, Ti, good); if (crosses) seg([S[0] - sh[0], S[1] - sh[1]], T, good);
+  const dot = (p, col, label, ghost) => { g.globalAlpha = ghost ? 0.45 : 1; marker(g, v.X(p[0]), v.Y(p[1]), { color: col, label }); g.globalAlpha = 1; };
+  if (crosses) { dot(Ti, '#111', 'target (copy)', true); dot([S[0] - sh[0], S[1] - sh[1]], '#d08a00', 'source (copy)', true); }
+  dot(S, '#d08a00', 'source'); dot(T, '#111', 'target');
+  const wrapped = Math.hypot(d[0], d[1]), unw = Math.hypot(T[0] - S[0], T[1] - S[1]);
+  let best = 0, bd = 1e9; for (let i = 0; i < row.n_vertices; i++) { const q = Math.hypot(wrap(V[dim * i] - T[0], LX), wrap(V[dim * i + 1] - T[1], LY)); if (q < bd) { bd = q; best = i; } }
+  const E = deq(D.fields[`${key}|1|${src}`], `E${key}|1|${src}`), ex = Math.hypot(wrap(V[dim * best] - S[0], LX), wrap(V[dim * best + 1] - S[1], LY)), num = ex + E[best], tolL = row.tol_linf_rel * row.D;
+  const st = (k, val, cls = '') => `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${val}</div></div>`;
+  $('sStats').innerHTML = st('Exact wrapped distance', wrapped.toFixed(4), 'ok') + st('Unwrapped distance', unw.toFixed(4), crosses ? 'no' : '') + st('Solver at nearest vertex', num.toFixed(4)) + st('Solver error there', (num - ex).toExponential(2));
+  $('sText').innerHTML = crosses ? `<p>The shortest route leaves through the ${Math.abs(sh[0]) > 0 ? (Math.abs(sh[1]) > 0 ? 'x and y seams' : 'x seam') : 'y seam'} and re-enters on the opposite side. Ignoring the identification overstates the distance by <b>${(unw - wrapped).toFixed(3)}</b>, which is <b>${((unw - wrapped) / tolL).toFixed(0)}&times;</b> the worst-point tolerance (${tolL.toFixed(4)}) on this mesh.</p><p class="mut">The solver's own error at the nearest mesh vertex is ${Math.abs(num - ex).toExponential(1)}: it takes the seam route.</p>` : `<p>For this target the shortest route stays inside the rectangle, so wrapped and unwrapped distances agree. Move the target across the rectangle to see the route switch.</p>`;
+  $('sC').onpointerdown = $('sC').onpointermove = e => { if (e.type == 'pointermove' && !e.buttons) return; const r = $('sC').getBoundingClientRect(), p = v.inv((e.clientX - r.left) * $('sC').width / r.width, (e.clientY - r.top) * $('sC').height / r.height);
+    seamTarget = [Math.min(LX, Math.max(0, p[0])), Math.min(LY, Math.max(0, p[1]))]; drawSeam(); };
+}
+
+/* ---------- geodesic field viewer ---------- */
+let negOn = false;
+const variantsOf = (fam, res) => uniq(GEO.filter(r => r.family == fam && r.resolution == res).map(r => r.variant + '|' + r.seed));
+function fieldControls(keep) {
+  const fam = $('fFam').value, resList = uniq(GEO.filter(r => r.family == fam && D.faces[fam + '|' + r.resolution]).map(r => r.resolution));
+  opts($('fRes'), resList.map(r => [r, `${r} (${GEO.find(g => g.family == fam && g.resolution == r).n_vertices} vertices)`]), keep && keep.res || resList[resList.length - 1]);
+  opts($('fVar'), variantsOf(fam, $('fRes').value).map(v => [v, v.endsWith('|0') ? 'regular' : v.replace('|', ', seed ')]), keep && keep.vs);
+  const srcs = Object.keys(fam == 'sphere' ? D.fixtures.sphere.sources : TOR.sources);
+  opts($('fSrc'), srcs.map(s => [s, s.replace(/_/g, ' ')]), keep && keep.src || (fam == 'torus' ? 'corner' : null));
+  opts($('fM'), (fam == 'sphere' ? [1, 4, 16] : [1, 4]).map(m => [m, 'm = ' + m + (m == 1 ? ' (default)' : '')]), keep && keep.m);
+  $('fNegL').style.display = fam == 'torus' ? '' : 'none'; if (fam != 'torus') negOn = false;
+}
+function drawFields() {
+  const fam = $('fFam').value, res = $('fRes').value, key = `${fam}|${res}|${$('fVar').value}`, src = $('fSrc').value, m = $('fM').value, row = GEOMAP.get(`${key}|${m}|${src}`);
+  const V = meshV(key), F = meshF(fam + '|' + res), n = row.n_vertices, dim = V.length / n, sv = row.source_vertex, ex = new Float32Array(n), nu = new Float32Array(n), er = new Float32Array(n);
+  let E = deq(D.fields[`${key}|${m}|${src}`], `E${key}|${m}|${src}`);
+  for (let i = 0; i < n; i++) {
+    if (fam == 'sphere') { const a = [V[3 * i], V[3 * i + 1], V[3 * i + 2]], b = [V[3 * sv], V[3 * sv + 1], V[3 * sv + 2]], c = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; ex[i] = Math.atan2(Math.hypot(...c), a[0] * b[0] + a[1] * b[1] + a[2] * b[2]); nu[i] = ex[i] + E[i]; }
+    else { ex[i] = Math.hypot(wrap(V[dim * i] - V[dim * sv], LX), wrap(V[dim * i + 1] - V[dim * sv + 1], LY)); nu[i] = negOn ? Math.hypot(V[dim * i] - V[dim * sv], V[dim * i + 1] - V[dim * sv + 1]) : ex[i] + E[i]; }
+    er[i] = nu[i] - ex[i]; }
+  let mae = 0, linf = 0, worst = 0; for (let i = 0; i < n; i++) { const a = Math.abs(er[i]); mae += a / n; if (a > linf) { linf = a; worst = i; } }
+  const tolM = row.tol_mae_rel * row.D, tolL = row.tol_linf_rel * row.D, lim = $('fScale').value == 'tol' ? tolL : linf, vmax = negOn ? Math.max(...nu) : row.D;
+  const c1 = seq(0, vmax, 16), c2 = dvg(lim), fc = (A, c) => (f, a, b, d) => c((A[a] + A[b] + A[d]) / 3);
+  const marks = [{ v: sv, color: '#f2b01e', label: 'source' }], marksE = marks.concat([{ v: worst, color: '#111', shape: 'x', label: 'worst' }]);
+  const render = () => { if (fam == 'sphere') { drawSphere($('fA'), V, F, fc(ex, c1), { marks }); drawSphere($('fB'), V, F, fc(nu, c1), { marks }); drawSphere($('fC'), V, F, fc(er, c2), { marks: marksE }); }
+    else { drawTorus($('fA'), V, F, dim, fc(ex, c1), { marks }); drawTorus($('fB'), V, F, dim, fc(nu, c1), { marks }); drawTorus($('fC'), V, F, dim, fc(er, c2), { marks: marksE }); } };
+  fieldRender = render; render();
+  colorbar($('fCb1'), VIR, $('fCb1l'), ['0', 'distance', fmt(vmax, 3) + (negOn ? '' : ' (diameter)')]); colorbar($('fCb2'), DIV, $('fCb2l'), ['&minus;' + fmt(lim, 2), '0', '+' + fmt(lim, 2)]);
+  const okM = mae <= tolM, okL = linf <= tolL, st = (k, v) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  $('fBt').textContent = negOn ? 'Unwrapped distance (deliberately wrong)' : 'Computed (heat method)'; $('fNeg').textContent = negOn ? 'Back to solver output' : 'Show unwrapped (wrong) answer'; $('fNeg').className = negOn ? 'on' : '';
+  $('fStats').innerHTML = st('Mean error / diameter', `${pct(mae / row.D, 3)} ${pill(okM)}`) + st('Tolerance (mean)', pct(row.tol_mae_rel, 3)) + st('Worst-point error / diameter', `${pct(linf / row.D, 3)} ${pill(okL)}`) + st('Tolerance (worst point)', pct(row.tol_linf_rel, 3)) + st('Exact distance at worst point', `${fmt(ex[worst], 3)} <span class="small mut">of ${fmt(row.D, 3)}</span>`) + st('Raw output (geodesic.csv)', negOn ? '<span class="small mut">negative_controls.csv</span>' : `<span class="small">MAE ${row.MAE.toExponential(4)}<br>L&infin; ${row.Linf.toExponential(4)}</span>`);
+  $('fNote').innerHTML = negOn ? 'This is the negative control: the straight-line distance inside the rectangle, scored by the same code. It must fail, and does.' : `Values above are recomputed in the page from the 16-bit stored field; the raw CSV values are shown for comparison. Mean edge length h = ${fmt(row.h_mean, 3)}; this case is ${row.required ? 'required to pass' : (m != 1 ? 'outside the scored default (m = 1)' : 'a declared stress case')}.` + (fam == 'sphere' ? ' Drag to rotate.' : '');
+}
+let fieldRender = () => {};
+function openCase(caseKey, src, m) { const p = caseKey.split('|'); $('fFam').value = p[0]; negOn = false; fieldControls({ res: p[1], vs: p[2] + '|' + p[3], src, m });
+  if (p[0] == 'sphere') { const V = meshV(caseKey), sv = GEOMAP.get(`${caseKey}|${m}|${src}`).source_vertex; ROT = lookAt([V[3 * sv], V[3 * sv + 1], V[3 * sv + 2]]); sphereViews.forEach(f => f()); }
+  drawFields(); $('fields').scrollIntoView({ behavior: 'smooth' }); }
+
+/* ---------- heat ---------- */
+function drawHeat() {
+  const res = $('hRes').value, key = `torus|${res}|${$('hVar').value}`, it = +$('hT').value, V = meshV(key), F = meshF('torus|' + res), rows = GAUSS.filter(r => r.case == key), row = rows[it], n = V.length / 2 | 0;
+  const dim = V.length / GEO.find(r => r.case == key).n_vertices, nn = V.length / dim, G = TOR.gaussian, c = [G.center_frac[0] * LX, G.center_frac[1] * LY], va = G.s0 * G.s0 + 2 * row.t, ex = new Float32Array(nn), nu = new Float32Array(nn), E = deq(D.gfields[`${key}|${it}`], `G${key}|${it}`);
+  let lim = 0; for (let i = 0; i < nn; i++) { let gx = 0, gy = 0; for (let a = -6; a <= 6; a++) { gx += Math.exp(-((V[dim * i] - c[0] - a * LX) ** 2) / (2 * va)); gy += Math.exp(-((V[dim * i + 1] - c[1] - a * LY) ** 2) / (2 * va)); } ex[i] = gx * gy / (2 * Math.PI * va); nu[i] = ex[i] + E[i]; lim = Math.max(lim, Math.abs(E[i])); }
+  lim = lim || 1e-12; const c1 = seq(0, row.peak_exact), c2 = dvg(lim), fc = (A, cc) => (f, a, b, d) => cc((A[a] + A[b] + A[d]) / 3);
+  drawTorus($('hA'), V, F, dim, fc(ex, c1)); drawTorus($('hB'), V, F, dim, fc(nu, c1)); drawTorus($('hC'), V, F, dim, fc(E, c2));
+  $('hTl').textContent = 't = ' + row.t; colorbar($('hCb1'), VIR, $('hCb1l'), ['0', 'temperature (scale follows the exact peak)', fmt(row.peak_exact, 3)]); colorbar($('hCb2'), DIV, $('hCb2l'), ['&minus;' + fmt(lim, 2), '0', '+' + fmt(lim, 2)]);
+  const st = (k, v) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  $('hStats').innerHTML = st('Peak, exact', fmt(row.peak_exact, 4)) + st('Peak, computed', fmt(row.peak_numeric, 4)) + st('Worst error / exact peak', pct(row.linf_rel_peak, 2)) + st('L2 error, relative', pct(row.l2_rel, 2)) + st('Total heat (must stay 1)', row.total_heat.toFixed(12)) + st('Total-heat drift', row.total_heat_rel_drift.toExponential(1));
+}
+function drawModes() {
+  const fam = $('mFam').value, vs = $('mVar').value, rows = HEAT.filter(r => r.family == fam && r.variant + '|' + r.seed == vs).sort((a, b) => resOrder(a.resolution) - resOrder(b.resolution));
+  $('mTab').innerHTML = '<tr><th>Mesh</th><th>Mode</th><th>&lambda;</th><th>Amplitude</th><th>exp(&minus;&lambda;T)</th><th>Rate error</th><th>Tolerance &lambda;h&sup2;</th><th></th></tr>' + rows.map(r => `<tr><td>${r.resolution}</td><td>${r.mode}</td><td>${fmt(r.lam, 4)}</td><td>${r.amplitude.toFixed(6)}</td><td>${r.amplitude_exact.toFixed(6)}</td><td>${r.lam == 0 ? 'dev. ' + r.residual.toExponential(1) : pct(r.rate_rel_err, 2)}</td><td>${r.lam == 0 ? '1e-10' : pct(r.tol, 2)}</td><td>${pill(r.passed)}${r.vacuous ? ' <span class="pill wn" title="tolerance above 50%: the mesh cannot resolve this mode, so passing means little">vacuous</span>' : ''}</td></tr>`).join('');
+  const modes = uniq(rows.filter(r => r.lam > 0).map(r => r.mode)), cols = ['--c0', '--c1', '--c2', '--c3', '--good'].map(css);
+  const series = modes.map((m, i) => ({ color: cols[i % 5], line: true, dots: true, pts: rows.filter(r => r.mode == m).map(r => ({ x: r.h_mean, y: r.rate_rel_err, tip: `${r.resolution} mode ${m}: ${pct(r.rate_rel_err, 2)}` })) }));
+  const hs = rows.map(r => r.h_mean), h0 = Math.min(...hs), h1 = Math.max(...hs), y0 = Math.min(...rows.filter(r => r.lam > 0).map(r => r.rate_rel_err));
+  series.push({ color: css('--mut'), line: true, dash: '5 4', width: 1.5, pts: [{ x: h0, y: y0 * 0.6 }, { x: h1, y: y0 * 0.6 * (h1 / h0) ** 2 }] });
+  plot($('mPlot'), { series, xlog: true, ylog: true, w: 420, h: 300, xlabel: 'mean edge length h', ylabel: 'relative decay-rate error', yfmt: v => pct(v, v < 0.01 ? 2 : 0) });
+}
+
+/* ---------- convergence ---------- */
+const VCOL = { regular: '--c0', mild: '--c3', strong: '--c1', jittered: '--c1' };
+function drawConv() {
+  const fam = $('cFam').value, met = $('cMet').value, m = +$('cM').value, rows = GEO.filter(r => r.family == fam && r.m == m), tolk = met == 'mae_rel' ? 'tol_mae_rel' : 'tol_linf_rel';
+  const vars = uniq(rows.map(r => r.variant)), seeds = uniq(rows.map(r => r.seed)), series = [];
+  const resL = uniq(rows.map(r => r.resolution)).sort((a, b) => resOrder(a) - resOrder(b));
+  series.push({ color: css('--bad'), line: true, dash: '6 4', width: 1.5, pts: resL.map(R => { const r = rows.find(q => q.resolution == R && q.variant == 'regular'); return { x: r.n_vertices, y: r[tolk] }; }) });
+  for (const v of vars) { const rs = rows.filter(r => r.variant == v), col = css(VCOL[v]);
+    series.push({ color: col, dots: true, pts: rs.map(r => { const has = !!D.fields[geoKey(r)]; return { x: r.n_vertices, y: r[met], dx: (seeds.indexOf(r.seed) - 1.5) * 5 + (vars.indexOf(v) - 1) * 2, hollow: !has, r: 3.2, tip: `${r.resolution} ${v} seed ${r.seed}, source ${r.source}: ${pct(r[met], 3)} (tolerance ${pct(r[tolk], 3)})${has ? ' - click for map' : ''}`, click: has ? () => openCase(r.case, r.source, r.m) : null }; }) });
+    series.push({ color: col, line: true, pts: resL.filter(R => rs.some(r => r.resolution == R)).map(R => { const q = rs.filter(r => r.resolution == R); return { x: q[0].n_vertices, y: mean(q.map(r => r[met])) }; }) }); }
+  const an = D.annotations[fam], ar = GEOMAP.get(`${an.case}|${an.m}|${an.source}`), annot = m == 1 ? [{ x: ar.n_vertices, y: ar[met], dx: (seeds.indexOf(ar.seed) - 1.5) * 5 + (vars.indexOf(ar.variant) - 1) * 2, label: fam == 'sphere' ? 'poor triangles' : 'cut-locus error' }] : [];
+  plot($('cPlot'), { series, xlog: true, ylog: true, annot, xlabel: 'vertices (finer mesh to the right)', ylabel: met == 'mae_rel' ? 'mean error / diameter' : 'worst-point error / diameter', yfmt: v => pct(v, v < 0.01 ? 1 : 0) });
+  $('cLeg').innerHTML = vars.map(v => `<span><i style="background:${css(VCOL[v])}"></i>${v}${D.fixtures[fam].variants[v].required ? '' : ' (stress case)'}</span>`).join('') + `<span><i style="background:${css('--bad')}"></i>tolerance (dashed)</span><span class="mut">filled = map available</span>`;
+  const reg = GEO.find(r => r.m == 1 && r.family == fam && r.resolution == ar.resolution && r.variant == 'regular' && r.source == ar.source);
+  $('cAnn').innerHTML = (fam == 'sphere' ? `<b>Annotated case: poor triangles.</b> ${ar.resolution}, ${ar.variant} perturbation, seed ${ar.seed}, source "${ar.source.replace(/_/g, ' ')}". Worst-point error ${pct(ar.linf_rel, 2)} of the diameter against ${pct(reg.linf_rel, 2)} on the regular mesh with the same source (${(ar.linf_rel / reg.linf_rel).toFixed(2)}&times;); mean error ${(ar.mae_rel / reg.mae_rel).toFixed(2)}&times;. It is ${ar.passed ? 'still inside' : 'outside'} the tolerance (${(an.ratio).toFixed(2)}&times; the limit).`
+    : `<b>Annotated case: the cut locus.</b> ${ar.resolution} ${ar.variant} torus, source "${ar.source.replace(/_/g, ' ')}". The worst error (${pct(ar.linf_rel, 2)} of the diameter, ${an.ratio.toFixed(2)}&times; the limit) sits at exact distance ${fmt(ar.exact_at_worst, 3)}: on the line of points half a period away, where two equally short routes meet and the true distance has a crease. The smoothed heat-method distance rounds that crease off. On the sphere the equivalent set is a single antipodal point.`) + `<p style="margin:8px 0 0"><button id="cOpen">Open this error map</button></p>`;
+  $('cOpen').onclick = () => openCase(an.case, an.source, an.m);
+  let h = '<tr><th>Mesh</th><th>Variant</th><th>Mean</th><th>Worst</th><th>Tolerance</th><th>Passing</th></tr>';
+  for (const R of resL) for (const v of vars) { const q = rows.filter(r => r.resolution == R && r.variant == v); if (!q.length) continue; const ok = q.filter(r => met == 'mae_rel' ? r.pass_mae : r.pass_linf).length;
+    h += `<tr><td>${R}</td><td>${v}</td><td>${pct(mean(q.map(r => r[met])), 3)}</td><td>${pct(Math.max(...q.map(r => r[met])), 3)}</td><td>${pct(q[0][tolk], 3)}</td><td class="${ok == q.length ? 'ok' : 'no'}">${ok}/${q.length}</td></tr>`; }
+  $('cTab').innerHTML = h;
+}
+function drawQuality() {
+  const rows = GEO.filter(r => r.family == 'sphere' && r.m == 1), base = {}, bs = {};
+  for (const r of rows.filter(r => r.variant == 'regular')) { (base[r.resolution] = base[r.resolution] || []).push(r.mae_rel); bs[r.resolution + r.source] = r.mae_rel; }
+  const s1 = {}, s2 = {};
+  for (const q of QUAL.filter(q => q.family == 'sphere')) { const rs = rows.filter(r => r.case == q.case); (s1[q.variant] = s1[q.variant] || []).push({ x: q.frac_obtuse, y: mean(rs.map(r => r.mae_rel)) / mean(base[q.resolution]), tip: `${q.resolution} ${q.variant} seed ${q.seed}: smallest angle ${q.min_angle_min.toFixed(1)} deg, ${pct(q.frac_obtuse, 1)} obtuse` }); }
+  for (const r of rows) (s2[r.variant] = s2[r.variant] || []).push({ x: r.source_local_min_angle, y: r.mae_rel / bs[r.resolution + r.source], r: 3, tip: `${r.resolution} ${r.variant} seed ${r.seed} ${r.source}` });
+  const mk = s => Object.keys(s).map(v => ({ color: css(VCOL[v]), dots: true, pts: s[v] }));
+  plot($('qPlot'), { series: mk(s1), w: 520, h: 300, xlabel: 'fraction of obtuse triangles', ylabel: 'mean error relative to regular mesh', xfmt: v => pct(v, 0), yfmt: v => v.toFixed(1) + 'x', yinclude: [1] });
+  plot($('qPlot2'), { series: mk(s2), w: 520, h: 300, xlabel: 'smallest angle around the source (degrees)', ylabel: 'mean error relative to regular mesh', xfmt: v => v, yfmt: v => v.toFixed(1) + 'x', yinclude: [1] });
+}
+
+/* ---------- cost ---------- */
+const VERD = { 'win': 'ok', 'regression': 'no' };
+function drawPerf() {
+  const met = $('pMet').value, rows = PERF.filter(r => r.metric == met), mx = Math.max(...rows.map(r => r.baseline_max)), unit = met == 'solver_peak_mb' ? ' MB' : ' s';
+  let h = '<table><tr><th>Mesh</th><th style="text-align:left;width:55%">Median of ' + rows[0].repeats + ' runs, one thread</th><th>Optimised / baseline</th><th>Verdict</th></tr>';
+  for (const r of rows) { const ticks = (ord, col) => RUNS.filter(q => q.mesh == r.mesh && q.ordering == ord).map(q => `<span style="position:absolute;left:${100 * q[met] / mx}%;top:-2px;width:1.5px;height:13px;background:${col};opacity:.6"></span>`).join('');
+    const bar = (v, ord, col) => `<div style="position:relative;height:13px;margin:2px 0"><span class="bar" style="width:${100 * v / mx}%;background:var(${col});opacity:.8;position:absolute;top:2px"></span>${ticks(ord, css('--fg'))}<span class="small" style="position:absolute;left:calc(${100 * Math.max(v, r[ord == 'colamd' ? 'baseline_max' : 'optimized_max']) / mx}% + 6px);top:-3px">${fmt(v, 3)}${unit}</span></div>`;
+    h += `<tr><td>${r.mesh}<br><span class="mut small">${r.n_vertices.toLocaleString()} vertices</span></td><td style="text-align:left">${bar(r.baseline_median, 'colamd', '--c0')}${bar(r.optimized_median, 'nested', '--c1')}</td><td>${r.ratio.toFixed(2)}&times;</td><td><span class="pill ${VERD[r.verdict] || 'wn'}">${r.verdict}</span></td></tr>`; }
+  $('pBars').innerHTML = h + '</table>';
+}
+function perfTable() {
+  const ms = uniq(PERF.map(r => r.mesh)), g = (m, k) => PERF.find(r => r.mesh == m && r.metric == k), cell = r => `<td>${fmt(r.baseline_median, 3)} &rarr; ${fmt(r.optimized_median, 3)}<br><span class="pill ${VERD[r.verdict] || 'wn'}">${r.ratio.toFixed(2)}&times; ${r.verdict}</span></td>`;
+  $('pTab').innerHTML = '<tr><th>Mesh</th><th>Setup, s</th><th>Per query, s</th><th>Peak solver memory, MB</th><th>Mean error / diameter<br>baseline | optimised</th><th>Largest field difference</th><th>Same accuracy</th></tr>' + ms.map(m => { const s = g(m, 'setup_s'), q = g(m, 'query_s'), p = g(m, 'solver_peak_mb'); return `<tr><td>${m}</td>${cell(s)}${cell(q)}${cell(p)}<td>${pct(s.baseline_mae_rel, 4)} | ${pct(s.optimized_mae_rel, 4)}</td><td>${s.max_field_diff.toExponential(1)}</td><td>${pill(s.equal_accuracy, 'yes', 'no')}</td></tr>`; }).join('');
+  const P = D.fixtures.performance; $('pIntro').innerHTML = `Measured bottleneck: the two sparse factorizations in the geodesic solver's setup. The optimisation changes only the elimination order (nested dissection instead of SuperLU's default), so the answers are the same to rounding. Each bar is the median of ${P.repeats} fresh single-threaded processes, baseline and optimised interleaved, same machine, same meshes, ${P.queries_per_repeat} source queries each. A "win" needs a 20% better median and non-overlapping run ranges.`;
+  $('pNote').innerHTML = `Peak solver memory is the rise in the process's peak resident size from "mesh built" to "all queries answered". Machine: ${D.summary.environment.platform}, Python ${D.summary.environment.python}, NumPy ${D.summary.environment.numpy}, SciPy ${D.summary.environment.scipy}. Absolute times will differ on a MacBook; the comparison was not rerun there.`;
+}
+
+/* ---------- checks ---------- */
+function checks() {
+  const names = { unwrapped_reference: 'Unwrapped distance scored as the answer', unstitched_mesh: 'Solver run on the rectangle with the seam left open', wrong_decay: 'Heat mode decaying at twice the true rate' };
+  let h = '<tr><th>Wrong result</th><th>Mesh</th><th>Source / mode</th><th>Error</th><th>Tolerance</th><th>Error / tolerance</th><th>Expected</th><th>Outcome</th></tr>';
+  for (const r of NEG) h += `<tr><td>${names[r.control]}</td><td>${r.resolution}</td><td>${String(r.source).replace(/_/g, ' ')}</td><td>${pct(r.value, 2)}</td><td>${pct(r.tolerance, 2)}</td><td>${r.tolerance ? (r.value / r.tolerance).toFixed(1) + '&times;' : '-'}</td><td>${r.expected_rejection ? 'must fail' : 'not expected'}</td><td>${r.rejected ? '<span class="pill ok">rejected</span>' : `<span class="pill ${r.expected_rejection ? 'no' : 'wn'}">accepted</span>`}</td></tr>`;
+  $('nTab').innerHTML = h;
+  const grp = {}; for (const r of STRUCT) { const k = r.family + '|' + r.variant; (grp[k] = grp[k] || []).push(r); }
+  $('stTab').innerHTML = '<tr><th>Family</th><th>Meshes</th><th>Euler characteristic</th><th>Faces per edge</th><th>Worst area error</th><th>Worst |L&middot;1|</th><th>Zero eigenvalues</th><th>Worst &lambda;&#8321; error</th><th></th></tr>' + Object.entries(grp).map(([k, q]) => { const e = q.filter(r => r.n_null != null); return `<tr><td>${k.replace('|', ', ')}</td><td>${q.length}</td><td>${uniq(q.map(r => r.euler)).join(', ')} (expected ${q[0].euler_expected})</td><td>${Math.min(...q.map(r => r.edge_face_min))}-${Math.max(...q.map(r => r.edge_face_max))}</td><td>${Math.max(...q.map(r => r.area_rel_err)).toExponential(1)}${q[0].family == 'sphere' ? ' <span class="mut">(inscribed mesh, tol h&sup2;)</span>' : ''}</td><td>${Math.max(...q.map(r => r.laplacian_constant_residual)).toExponential(1)}</td><td>${uniq(e.map(r => r.n_null)).join(', ')} <span class="mut">(${e.length} checked)</span></td><td>${pct(Math.max(...e.map(r => r.eig1_rel_err)), 2)}</td><td>${pill(q.every(r => r.passed), q.length + '/' + q.length + ' pass')}</td></tr>`; }).join('');
+  $('rawLinks').innerHTML = ['geodesic.csv', 'quality.csv', 'structure.csv', 'heat_modes.csv', 'heat_gaussian.csv', 'negative_controls.csv', 'perf_runs.csv', 'perf_summary.csv', 'summary.json', 'baseline.json', 'fields.npz'].map(f => `<a href="../results/beyond_sphere/${f}">${f}</a>`).join(' &middot; ');
+  $('unver').innerHTML = ['Error maps are embedded only up to sphere L4 and torus 96&times;64; finer meshes appear in the plots and tables but not as maps.',
+    'Timings and memory were measured on one Linux x86-64 machine. The optimisation was not rerun on macOS or with a multithreaded BLAS.',
+    'The explanation of the torus error plateau (smoothing at t = h&sup2; plus the crease on the cut locus) is consistent with the maps and with the m sweep, but was not tested against an independent geodesic solver.',
+    'The nested-dissection ordering is tested for equivalence on the benchmark meshes only; meshes with boundaries or very uneven density were not tried.',
+    'Stored error fields are quantised to 16 bits (relative precision 3e-5), so values recomputed in this page can differ from the CSV in the fifth significant digit.',
+    'Tolerances were derived from the regular sphere. Whether they are the right bar for the torus is a judgement left for review; they were not changed.'].map(s => `<li>${s}</li>`).join('');
+}
+
+/* ---------- findings ---------- */
+function findings() {
+  const S = D.summary, tr = GEO.filter(r => r.family == 'torus' && r.variant == 'regular' && r.m == 1), spread = Math.max(...uniq(tr.map(r => r.resolution)).map(R => { const q = tr.filter(r => r.resolution == R).map(r => r.mae_rel); return Math.max(...q) - Math.min(...q); }));
+  const tm = R => tr.find(r => r.resolution == R), req = GEO.filter(r => r.required), fail = fam => req.filter(r => r.family == fam && !r.passed).length, tot = fam => req.filter(r => r.family == fam).length;
+  const sm = (v, R) => mean(GEO.filter(r => r.family == 'sphere' && r.m == 1 && r.variant == v && r.resolution == R).map(r => r.mae_rel));
+  const t4 = GEO.filter(r => r.family == 'torus' && r.m == 4), t4m = t4.filter(r => r.pass_mae).length, t4l = t4.filter(r => r.pass_linf).length;
+  const rr = k => { const q = PERF.filter(r => r.metric == k).map(r => r.ratio); return [Math.min(...q), Math.max(...q)]; }, wins = k => PERF.filter(r => r.metric == k && r.verdict == 'win').length, winsE = k => EARLY.filter(r => r.metric == k && r.verdict == 'win').length, nm = uniq(PERF.map(r => r.mesh)).length;
+  const hs = HEAT.filter(r => !r.vacuous), su = rr('setup_s'), me = rr('solver_peak_mb'), qu = rr('query_s'), red = a => `${Math.round(100 * (1 - a[1]))}-${Math.round(100 * (1 - a[0]))}%`;
+  const F = [
+    ['good', 'seam', 'The torus seam is handled correctly, and the tests can tell.', `All ${S.structure.n} meshes pass the connectivity, area and constant-nullspace checks. On the regular torus the error is the same whether the source is in the interior, beside either seam or on the corner (largest difference ${e0(spread)} of the diameter). The unwrapped distance and the unstitched mesh are rejected in all ${S.negative_controls.rejected_of_expected} of ${S.negative_controls.expected} cases where they should be.`],
+    ['good', 'heat', 'Heat diffusion is accurate on both new mesh families.', `All ${HEAT.length} Fourier and spherical-harmonic decay checks pass (${S.heat_modes.vacuous} of them on meshes too coarse for the mode to be a real test), the decay-rate error falls at second order, and the constant mode and total heat are preserved to rounding, including on jittered meshes.`],
+    ['bad', 'convergence', 'Heat-method geodesics stop improving, and fail the fixed tolerance on fine meshes.', `With the default heat time the mean error on the regular torus is ${pct(tm('96x64').mae_rel, 2)}, ${pct(tm('192x128').mae_rel, 2)}, ${pct(tm('384x256').mae_rel, 2)} of the diameter at 96&times;64, 192&times;128, 384&times;256: no gain. ${fail('torus')} of ${tot('torus')} required torus cases and ${fail('sphere')} of ${tot('sphere')} required sphere cases miss the tolerance, mostly on worst-point error at the cut locus. A longer heat time (m = 4) brings ${t4m} of ${t4.length} torus cases inside the mean tolerance but only ${t4l} inside the worst-point one. The tolerance was not relaxed.`],
+    ['warn', 'quality', 'Poor triangles cost accuracy; where the source sits matters much less.', `At level 6 the strongly perturbed sphere (about 29% obtuse triangles) has ${(sm('strong', 'L6') / sm('regular', 'L6')).toFixed(1)}&times; the mean error of the regular mesh, the mild perturbation ${(sm('mild', 'L6') / sm('regular', 'L6')).toFixed(1)}&times;. Three seeds agree closely. Putting the source on the worst triangle changes the error by a few percent only.`],
+    [wins('setup_s') == nm && wins('solver_peak_mb') == nm ? 'good' : 'warn', 'cost', 'One optimisation: less memory and faster setup at identical accuracy; per-query gain is not reliable.', `Reordering the factorization lowers median setup time by ${red(su)} and peak solver memory by ${red(me)}. Against the fixed rule (20% better median and non-overlapping run ranges) memory is a win on ${wins('solver_peak_mb')} of ${nm} meshes and setup on ${wins('setup_s')} of ${nm}; per-query time improves by ${red(qu)} but is a win on only ${wins('query_s')} of ${nm}.${EARLY ? ` An earlier run of the same protocol on the same machine gave ${winsE('setup_s')}/${nm} setup, ${winsE('solver_peak_mb')}/${nm} memory and ${winsE('query_s')}/${nm} per-query wins: the medians agree, the verdicts move with single slow runs.` : ''} Distance fields differ by at most ${e0(Math.max(...PERF.map(r => r.max_field_diff)))}.`]];
+  $('findingList').innerHTML = F.map((f, i) => `<div class="finding ${f[0]}"><b>${i + 1}. ${f[2]}</b>${f[3]} <a href="#${f[1]}">See the evidence</a></div>`).join('');
+  const st = (k, v) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  $('topStats').innerHTML = st('Geodesic cases scored', S.geodesic.n) + st('Required cases failing', `<span class="no">${S.geodesic.required_failed}</span> / ${S.geodesic.required}`) + st('Heat-mode checks failing', `${S.heat_modes.failed} / ${S.heat_modes.n}`) + st('Structure checks failing', `${S.structure.failed} / ${S.structure.n}`) + st('Wrong answers rejected', `${S.negative_controls.rejected_of_expected} / ${S.negative_controls.expected}`) + st('Original sphere tests', D.baseline.tests.split(' (')[0]);
+  $('rev').innerHTML = `Revision <code>${S.environment.commit.slice(0, 10)}</code>${S.environment.dirty ? ' (plus uncommitted changes)' : ''}, generated ${S.environment.generated}. Baseline <code>${D.baseline.commit.slice(0, 10)}</code>.`;
+}
+
+/* ---------- wiring ---------- */
+function init() {
+  findings();
+  opts($('gLevel'), ['L2', 'L3', 'L4'].map(l => [l, `${l} (${QUAL.find(q => q.case == `sphere|${l}|regular|0`).n_vertices} vertices)`]), 'L3'); opts($('gSeed'), D.fixtures.sphere.seeds);
+  ['gLevel', 'gVar', 'gSeed'].forEach(i => $(i).onchange = drawGeom); colorbar($('gCb'), ANG);
+  ROT = mul(rotX(0.35), rotY(-0.5)); sphereViews.push(drawGeom, () => { if ($('fFam').value == 'sphere') fieldRender(); }); ['gA', 'gB', 'fA', 'fB', 'fC'].forEach(i => dragRotate($(i))); drawGeom();
+  const tres = Object.keys(D.faces).filter(k => k.startsWith('torus')).map(k => k.split('|')[1]);
+  opts($('sSrc'), Object.keys(TOR.sources).map(s => [s, `${s.replace(/_/g, ' ')} - ${TOR.sources[s].note}`]), 'near_x_seam'); opts($('sRes'), tres, '24x16'); ['sSrc', 'sRes', 'sVar'].forEach(i => $(i).onchange = drawSeam); drawSeam();
+  fieldControls(); $('fFam').onchange = () => { fieldControls(); drawFields(); }; $('fRes').onchange = () => { fieldControls({ res: $('fRes').value, src: $('fSrc').value, m: $('fM').value }); drawFields(); };
+  ['fVar', 'fSrc', 'fM', 'fScale'].forEach(i => $(i).onchange = drawFields); $('fNeg').onclick = () => { negOn = !negOn; drawFields(); }; drawFields();
+  opts($('hRes'), tres, '48x32'); ['hRes', 'hVar'].forEach(i => $(i).onchange = drawHeat); $('hT').oninput = drawHeat; let timer = null;
+  $('hPlay').onclick = () => { if (timer) { clearInterval(timer); timer = null; $('hPlay').textContent = 'Play'; return; } $('hPlay').textContent = 'Pause'; timer = setInterval(() => { $('hT').value = (+$('hT').value + 1) % 8; drawHeat(); }, 700); }; drawHeat();
+  const mv = () => { opts($('mVar'), uniq(HEAT.filter(r => r.family == $('mFam').value).map(r => r.variant + '|' + r.seed)).map(v => [v, v.endsWith('|0') ? 'regular' : v.replace('|', ', seed ')])); drawModes(); }; $('mFam').onchange = mv; $('mVar').onchange = drawModes; mv();
+  ['cFam', 'cMet', 'cM'].forEach(i => $(i).onchange = drawConv); drawConv(); drawQuality();
+  $('pMet').onchange = drawPerf; drawPerf(); perfTable(); checks();
+  matchMedia('(prefers-color-scheme:dark)').addEventListener('change', () => { drawSeam(); drawModes(); drawConv(); drawQuality(); drawPerf(); });
+}
+init();
+</script>
+</body>
+</html>

@@ -37,18 +37,16 @@ from .mesh import TriMesh
 # ---------------------------------------------------------------------------
 def face_areas(mesh: TriMesh) -> np.ndarray:
     """Return the ``(|F|,)`` array of triangle areas."""
-    v = mesh.vertices
-    f = mesh.faces
-    e1 = v[f[:, 1]] - v[f[:, 0]]
-    e2 = v[f[:, 2]] - v[f[:, 0]]
+    c = mesh.corner_positions()
+    e1 = c[:, 1] - c[:, 0]
+    e2 = c[:, 2] - c[:, 0]
     return 0.5 * np.linalg.norm(np.cross(e1, e2), axis=1)
 
 
 def face_normals(mesh: TriMesh, normalize: bool = True) -> np.ndarray:
     """Return ``(|F|, 3)`` (unit) face normals from the stored winding."""
-    v = mesh.vertices
-    f = mesh.faces
-    n = np.cross(v[f[:, 1]] - v[f[:, 0]], v[f[:, 2]] - v[f[:, 0]])
+    c = mesh.corner_positions()
+    n = np.cross(c[:, 1] - c[:, 0], c[:, 2] - c[:, 0])
     if normalize:
         norm = np.linalg.norm(n, axis=1, keepdims=True)
         norm[norm == 0] = 1.0
@@ -59,15 +57,11 @@ def face_normals(mesh: TriMesh, normalize: bool = True) -> np.ndarray:
 def interior_angles(mesh: TriMesh) -> np.ndarray:
     """Return ``(|F|, 3)`` interior angles; column ``k`` is the angle at the
     ``k``-th vertex of each face."""
-    v = mesh.vertices
-    f = mesh.faces
+    p = mesh.corner_positions()
     angles = np.empty((mesh.n_faces, 3))
     for k in range(3):
-        a = f[:, k]
-        b = f[:, (k + 1) % 3]
-        c = f[:, (k + 2) % 3]
-        u = v[b] - v[a]
-        w = v[c] - v[a]
+        u = p[:, (k + 1) % 3] - p[:, k]
+        w = p[:, (k + 2) % 3] - p[:, k]
         u = u / np.linalg.norm(u, axis=1, keepdims=True)
         w = w / np.linalg.norm(w, axis=1, keepdims=True)
         cos = np.clip(np.einsum("ij,ij->i", u, w), -1.0, 1.0)
@@ -117,7 +111,6 @@ def cotangent_laplacian(
     weight of the *opposite* edge.  Summing the (up to two) triangles incident
     to an interior edge gives ``w_ij = (cot a + cot b) / 2``.
     """
-    v = mesh.vertices
     f = mesh.faces
     angles = interior_angles(mesh)
     cot = 1.0 / np.tan(angles)  # (|F|, 3)

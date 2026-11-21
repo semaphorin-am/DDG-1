@@ -27,6 +27,7 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
 from .mesh import TriMesh
+from .ordering import nested_dissection
 from .geometry import (
     face_areas,
     face_normals,
@@ -54,7 +55,7 @@ def face_gradient(
     where ``e_m`` is the edge *opposite* the ``m``-th vertex.  Returns an
     ``(|F|, 3)`` array of gradient vectors lying in each triangle's plane.
     """
-    v = mesh.vertices
+    c = mesh.corner_positions()
     f = mesh.faces
     if areas is None:
         areas = face_areas(mesh)
@@ -64,9 +65,7 @@ def face_gradient(
     grad = np.zeros((mesh.n_faces, 3))
     for m in range(3):
         # edge opposite local vertex m goes from vertex (m+1) to (m+2)
-        j = f[:, (m + 1) % 3]
-        k = f[:, (m + 2) % 3]
-        e_opp = v[k] - v[j]
+        e_opp = c[:, (m + 2) % 3] - c[:, (m + 1) % 3]
         grad += u[f[:, m]][:, None] * np.cross(normals, e_opp)
     grad /= (2.0 * areas)[:, None]
     return grad
@@ -85,7 +84,7 @@ def integrated_divergence(
     and ``t1, t2`` are the angles opposite them.  Returns a ``(|V|,)`` array,
     the right-hand side of the Poisson system.
     """
-    v = mesh.vertices
+    c = mesh.corner_positions()
     f = mesh.faces
     if cot is None:
         cot = 1.0 / np.tan(interior_angles(mesh))
@@ -93,10 +92,8 @@ def integrated_divergence(
     div = np.zeros(mesh.n_vertices)
     for m in range(3):
         i = f[:, m]
-        j = f[:, (m + 1) % 3]
-        k = f[:, (m + 2) % 3]
-        e1 = v[j] - v[i]          # edge i->j, opposite angle at vertex k
-        e2 = v[k] - v[i]          # edge i->k, opposite angle at vertex j
+        e1 = c[:, (m + 1) % 3] - c[:, m]   # edge i->j, opposite angle at vertex k
+        e2 = c[:, (m + 2) % 3] - c[:, m]   # edge i->k, opposite angle at vertex j
         cot_k = cot[:, (m + 2) % 3]
         cot_j = cot[:, (m + 1) % 3]
         contrib = 0.5 * (
@@ -141,10 +138,18 @@ class HeatMethodSolver:
     m : float
         Time-scale multiplier; the diffusion time is ``t = m * h_mean**2`` with
         ``h_mean`` the average edge length (Crane et al. recommend ``m ~ 1``).
+    ordering : {"colamd", "nested"}
+        Elimination order for the two sparse factorizations.  ``"colamd"`` is
+        the original behaviour (SuperLU defaults).  ``"nested"`` reorders the
+        vertices by nested dissection (:mod:`ddg.ordering`) and factors without
+        pivoting; same answers to round-off, less fill.
     """
 
-    def __init__(self, mesh: TriMesh, m: float = 1.0):
+    def __init__(self, mesh: TriMesh, m: float = 1.0, ordering: str = "colamd"):
+        if ordering not in ("colamd", "nested"):
+            raise ValueError("ordering must be 'colamd' or 'nested'")
         self.mesh = mesh
+        self.ordering = ordering
         self.areas = face_areas(mesh)
         self.normals = face_normals(mesh)
         self.angles = interior_angles(mesh)
@@ -156,17 +161,39 @@ class HeatMethodSolver:
         h = mesh.edge_lengths().mean()
         self.t = m * h * h
 
-        # Prefactor the two SPD-ish systems used on every query.
         A = (self.M + self.t * self.L).tocsc()
-        self._heat_solve = spla.factorized(A)
-
         # Poisson matrix with vertex 0 pinned (kept fixed for reuse).
         self._pin = 0
         n = mesh.n_vertices
         keep = np.ones(n, dtype=bool)
         keep[self._pin] = False
         self._keep = keep
-        self._Lr_solve = spla.factorized(self.L[keep][:, keep].tocsc())
+
+        # Prefactor the two SPD-ish systems used on every query.
+        if ordering == "colamd":
+            heat_lu = spla.splu(A)
+            pois_lu = spla.splu(self.L[keep][:, keep].tocsc())
+            self._heat_solve = heat_lu.solve
+            self._Lr_solve = pois_lu.solve
+        else:
+            perm = nested_dissection(mesh.vertices, mesh.edges)
+            perm_r = perm[perm != self._pin]      # same order, pin removed
+            opts = dict(permc_spec="NATURAL", diag_pivot_thresh=0.0,
+                        options=dict(SymmetricMode=True))
+            heat_lu = spla.splu(A[perm][:, perm].tocsc(), **opts)
+            pois_lu = spla.splu(self.L[perm_r][:, perm_r].tocsc(), **opts)
+            inv = np.empty(n, dtype=np.int64)
+            inv[perm] = np.arange(n)
+            # position of each kept vertex inside perm_r
+            inv_r = np.empty(n, dtype=np.int64)
+            inv_r[perm_r] = np.arange(n - 1)
+            inv_r = inv_r[keep]
+            keep_idx = np.flatnonzero(keep)
+            perm_in_keep = np.searchsorted(keep_idx, perm_r)
+            self._heat_solve = lambda b: heat_lu.solve(b[perm])[inv]
+            self._Lr_solve = lambda b: pois_lu.solve(b[perm_in_keep])[inv_r]
+        self.factor_nnz = int(heat_lu.L.nnz + heat_lu.U.nnz
+                              + pois_lu.L.nnz + pois_lu.U.nnz)
 
     def _poisson(self, b: np.ndarray) -> np.ndarray:
         phi = np.zeros(self.mesh.n_vertices)
@@ -200,7 +227,8 @@ class HeatMethodSolver:
 
 
 def heat_geodesic(
-    mesh: TriMesh, source: int | Sequence[int], m: float = 1.0
+    mesh: TriMesh, source: int | Sequence[int], m: float = 1.0,
+    ordering: str = "colamd",
 ) -> np.ndarray:
     """Convenience one-shot wrapper around :class:`HeatMethodSolver`."""
-    return HeatMethodSolver(mesh, m=m).distance(source)
+    return HeatMethodSolver(mesh, m=m, ordering=ordering).distance(source)
