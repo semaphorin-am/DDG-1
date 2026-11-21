@@ -89,6 +89,8 @@ def main() -> None:
         gauss=records(gauss, [c for c in gauss.columns]),
         neg=records(neg, [c for c in neg.columns]),
         perf=records(perf, [c for c in perf.columns]),
+        perf_earlier=(lambda q: records(q, list(q.columns)))(rd("perf_summary_run1.csv"))
+        if os.path.exists(os.path.join(RESULTS, "perf_summary_run1.csv")) else None,
         runs=records(runs, ["mesh", "ordering", "repeat", "setup_s", "query_s", "solver_peak_mb"]),
         meshes=meshes, faces=faces, fields=fields, gfields=gfields,
     )

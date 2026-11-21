@@ -61,3 +61,23 @@ Tolerances were not touched. Outcomes of the first sweep (`benchmarks/run.py`):
 - Approach 2: geometric nested-dissection ordering (`ddg/ordering.py`),
   opt-in via `ordering="nested"`. Fields agree with the default to ~1e-13.
   Kept. No third approach attempted.
+
+## 6. Report, figures, fresh-checkout reproduction
+
+- `./reproduce.sh` run in a fresh clone (7 min 50 s): 91 passed, 5 xfailed;
+  all accuracy CSVs reproduce the first run to <= 5e-14.
+- **Performance verdicts did not fully reproduce.** Medians agree between the
+  two runs (setup 0.31-0.63x, memory 0.48-0.63x, query 0.72-0.90x) but under
+  the fixed rule (>= 20 % and non-overlapping ranges) the rerun gives setup
+  5/7 wins (was 7/7), memory 7/7 (7/7), per-query 0/7 (was 3/7): one slow
+  repeat is enough to overlap the ranges. The rule was not changed. The rerun
+  is the committed result (`perf_*.csv`); the first run is kept as
+  `perf_*_run1.csv` and both are quoted in the report.
+- Report checked with networking disabled in Chrome 156 (Linux) only: no
+  console errors, no non-file requests, every select option exercised,
+  wrong-answer toggle, heat scrubber/play, plot-to-map link. Displayed values
+  spot-checked against `geodesic.csv` and `negative_controls.csv`.
+- Not verified: Safari/Firefox, macOS; timings on a MacBook; the cut-locus
+  explanation of the torus L-inf failure (not checked against another
+  geodesic solver); whether sphere-derived tolerances are the right bar for
+  the torus.
