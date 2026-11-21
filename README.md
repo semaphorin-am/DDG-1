@@ -144,6 +144,21 @@ electrophysiology, cortical-surface analysis, geometric machine learning, and
 numerical PDEs on manifolds. The sphere just provides the ground truth to trust
 the implementation first.
 
+## Beyond the sphere
+
+The benchmark is extended to perturbed (irregular) sphere meshes and a flat
+periodic torus (a rectangle with opposite edges identified), each judged
+against exact answers and tolerances fixed before the solver was changed.
+
+```bash
+./reproduce.sh     # install, run all tests, regenerate results, figures and report
+```
+
+- Report (open directly in a browser, no server): `docs/beyond_sphere_report.html`
+- Raw results: `results/beyond_sphere/` · static figures: `figures/beyond_sphere/`
+- References, fixtures, tolerances: `benchmarks/references.py`, `benchmarks/fixtures.json`, `benchmarks/tolerances.json`
+- Progress log and known limitations: `docs/beyond_sphere_progress.md`
+
 ## References
 
 - K. Crane, C. Weischedel, M. Wardetzky. *Geodesics in Heat: A New Approach to
