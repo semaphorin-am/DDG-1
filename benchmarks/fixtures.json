@@ -1,8 +1,11 @@
 {
   "_comment": "Fixed inputs for the beyond-the-sphere benchmark. Committed before solver changes. Sources are given as locations; the benchmark uses the nearest mesh vertex and measures exact distance from that vertex's actual position.",
   "heat_method_m": 1.0,
+  "heat_method_m_sweep": [1.0, 4.0, 16.0],
+  "_m_note": "m = 1 is the solver default and the only setting that is REQUIRED to pass. m = 4 and 16 were added after the first torus run showed the default stalls (see progress log, entry 3); they are scored against the same, unchanged tolerances.",
   "sphere": {
     "levels": [2, 3, 4, 5, 6],
+    "extra_levels_regular": [7],
     "seeds": [11, 23, 47],
     "variants": {
       "regular": {"amplitude": 0.0,  "required": true,  "note": "original icosphere (baseline family)"},
@@ -22,6 +25,7 @@
     "Lx": 1.5,
     "Ly": 1.0,
     "resolutions": [[24, 16], [48, 32], [96, 64], [192, 128]],
+    "extra_resolutions_regular": [[384, 256]],
     "seeds": [11, 23, 47],
     "variants": {
       "regular":  {"jitter": 0.0,  "required": true},

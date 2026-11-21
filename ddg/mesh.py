@@ -117,12 +117,28 @@ class TriMesh:
     faces: np.ndarray
     edges: np.ndarray = field(default=None)
     edge_index: Dict[Tuple[int, int], int] = field(default=None, repr=False)
+    # Optional (|F|, 3, 3) corner positions, one copy per face.  When set, all
+    # metric quantities (areas, angles, gradients, edge lengths) are computed
+    # from these instead of ``vertices[faces]``.  This is what lets a mesh carry
+    # an intrinsic metric that no single vertex embedding has, e.g. a flat
+    # torus whose seam triangles are "unwrapped" across the identified edge.
+    corners: np.ndarray = field(default=None, repr=False)
+    # (Lx, Ly) for periodic flat meshes, else None.
+    period: Tuple[float, float] = field(default=None)
 
     def __post_init__(self) -> None:
         self.vertices = np.asarray(self.vertices, dtype=np.float64)
         self.faces = np.asarray(self.faces, dtype=np.int64)
+        if self.corners is not None:
+            self.corners = np.asarray(self.corners, dtype=np.float64)
         if self.edges is None:
             self._build_edges()
+
+    def corner_positions(self) -> np.ndarray:
+        """``(|F|, 3, 3)`` positions of each face's three corners."""
+        if self.corners is not None:
+            return self.corners
+        return self.vertices[self.faces]
 
     # -- derived connectivity ------------------------------------------------
     def _build_edges(self) -> None:
@@ -149,6 +165,20 @@ class TriMesh:
 
     # -- statistics ----------------------------------------------------------
     def edge_lengths(self) -> np.ndarray:
+        if self.corners is not None:
+            # Intrinsic metric: read each edge's length off a face that owns it.
+            c = self.corners
+            f = self.faces
+            n = self.n_vertices
+            keys = np.concatenate([
+                np.minimum(f[:, k], f[:, (k + 1) % 3]) * n
+                + np.maximum(f[:, k], f[:, (k + 1) % 3]) for k in range(3)])
+            lens = np.concatenate([
+                np.linalg.norm(c[:, (k + 1) % 3] - c[:, k], axis=1) for k in range(3)])
+            edge_keys = self.edges[:, 0] * n + self.edges[:, 1]
+            order = np.argsort(keys)
+            pos = np.searchsorted(keys[order], edge_keys)
+            return lens[order][pos]
         v = self.vertices
         return np.linalg.norm(v[self.edges[:, 0]] - v[self.edges[:, 1]], axis=1)
 
@@ -195,6 +225,113 @@ def icosphere(subdivisions: int = 3) -> TriMesh:
         verts, faces = _subdivide(verts, faces)
     # guard against tiny drift from repeated averaging
     verts /= np.linalg.norm(verts, axis=1, keepdims=True)
+    return TriMesh(verts, faces)
+
+
+def _disk_samples(rng: np.random.Generator, n: int) -> Tuple[np.ndarray, np.ndarray]:
+    """``n`` points uniform in the unit disk, as (radius, angle)."""
+    return np.sqrt(rng.random(n)), 2 * np.pi * rng.random(n)
+
+
+def perturbed_icosphere(subdivisions: int, amplitude: float, seed: int = 0) -> TriMesh:
+    """Icosphere with every vertex jittered *along the sphere*.
+
+    Each vertex moves by a random tangential offset, uniform in a disk of
+    radius ``amplitude * (mean length of its incident edges)``, and is then
+    projected back to the unit sphere.  Connectivity is unchanged, and every
+    vertex still lies exactly on the sphere, so great-circle distance remains
+    the exact reference; only triangle shape degrades.
+    """
+    base = icosphere(subdivisions)
+    if amplitude == 0.0:
+        return base
+    v = base.vertices
+    e = base.edges
+    lens = base.edge_lengths()
+    n = base.n_vertices
+    local = (np.bincount(e[:, 0], lens, n) + np.bincount(e[:, 1], lens, n)) / (
+        np.bincount(e[:, 0], minlength=n) + np.bincount(e[:, 1], minlength=n))
+    rng = np.random.default_rng([int(seed), int(subdivisions)])
+    r, th = _disk_samples(rng, n)
+    # orthonormal tangent frame at each vertex
+    helper = np.where(np.abs(v[:, [2]]) < 0.9, [[0.0, 0.0, 1.0]], [[1.0, 0.0, 0.0]])
+    t1 = np.cross(v, helper)
+    t1 /= np.linalg.norm(t1, axis=1, keepdims=True)
+    t2 = np.cross(v, t1)
+    disp = (amplitude * local * r)[:, None] * (
+        np.cos(th)[:, None] * t1 + np.sin(th)[:, None] * t2)
+    w = v + disp
+    w /= np.linalg.norm(w, axis=1, keepdims=True)
+    return TriMesh(w, base.faces.copy())
+
+
+def _grid_positions(nx: int, ny: int, Lx: float, Ly: float, jitter: float,
+                    seed: int) -> np.ndarray:
+    hx, hy = Lx / nx, Ly / ny
+    ii, jj = np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+    P = np.stack([ii * hx, jj * hy], axis=-1).astype(np.float64)
+    if jitter:
+        rng = np.random.default_rng([int(seed), int(nx), int(ny)])
+        r, th = _disk_samples(rng, nx * ny)
+        d = jitter * min(hx, hy) * r
+        P += np.stack([d * np.cos(th), d * np.sin(th)], axis=-1).reshape(nx, ny, 2)
+    return P
+
+
+def flat_torus(nx: int, ny: int, Lx: float = 1.0, Ly: float = 1.0,
+               jitter: float = 0.0, seed: int = 0) -> TriMesh:
+    """Flat periodic torus: the rectangle ``[0, Lx) x [0, Ly)`` with opposite
+    edges identified (not an embedded doughnut).
+
+    ``nx * ny`` vertices on a grid, two triangles per cell.  Column ``nx`` *is*
+    column 0 and row ``ny`` *is* row 0, so there are no boundary vertices and no
+    duplicated seam vertices.  ``vertices`` holds each vertex once, wrapped
+    into the rectangle (z = 0); ``corners`` holds the unwrapped positions used
+    by every triangle, so triangles that straddle a seam have their true flat
+    shape.  ``jitter`` displaces vertices by up to that fraction of the grid
+    spacing (same displacement for a vertex in all its triangles).
+    """
+    if nx < 3 or ny < 3:
+        raise ValueError("need nx, ny >= 3 for a simplicial torus")
+    P = _grid_positions(nx, ny, Lx, Ly, jitter, seed)
+    ii, jj = np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+    ii = ii.ravel(); jj = jj.ravel()
+
+    def vid(i, j):
+        return (i % nx) * ny + (j % ny)
+
+    def pos(i, j):  # unwrapped position of grid node (i, j), i <= nx, j <= ny
+        p = P[i % nx, j % ny].copy()
+        p[:, 0] += (i // nx) * Lx
+        p[:, 1] += (j // ny) * Ly
+        return p
+
+    quads = [(ii, jj), (ii + 1, jj), (ii + 1, jj + 1), (ii, jj + 1)]
+    ids = [vid(i, j) for i, j in quads]
+    xy = [pos(i, j) for i, j in quads]
+    faces = np.concatenate([np.stack([ids[0], ids[1], ids[2]], 1),
+                            np.stack([ids[0], ids[2], ids[3]], 1)])
+    c2 = np.concatenate([np.stack([xy[0], xy[1], xy[2]], 1),
+                         np.stack([xy[0], xy[2], xy[3]], 1)])
+    corners = np.concatenate([c2, np.zeros(c2.shape[:2] + (1,))], axis=2)
+    verts = np.zeros((nx * ny, 3))
+    verts[:, 0] = P[..., 0].ravel() % Lx
+    verts[:, 1] = P[..., 1].ravel() % Ly
+    return TriMesh(verts, faces, corners=corners, period=(float(Lx), float(Ly)))
+
+
+def open_rectangle(nx: int, ny: int, Lx: float = 1.0, Ly: float = 1.0) -> TriMesh:
+    """The same grid as :func:`flat_torus` but with the seams left *open*
+    (``(nx+1) * (ny+1)`` vertices, a disk with boundary).  Exists only as a
+    negative control: distances on it cannot wrap around."""
+    ii, jj = np.meshgrid(np.arange(nx + 1), np.arange(ny + 1), indexing="ij")
+    verts = np.stack([ii.ravel() * Lx / nx, jj.ravel() * Ly / ny,
+                      np.zeros(ii.size)], axis=1)
+    i, j = np.meshgrid(np.arange(nx), np.arange(ny), indexing="ij")
+    i = i.ravel(); j = j.ravel()
+    a = i * (ny + 1) + j; b = (i + 1) * (ny + 1) + j
+    c = (i + 1) * (ny + 1) + j + 1; d = i * (ny + 1) + j + 1
+    faces = np.concatenate([np.stack([a, b, c], 1), np.stack([a, c, d], 1)])
     return TriMesh(verts, faces)
 
 
